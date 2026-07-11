@@ -1,11 +1,12 @@
 #"Someone makes an HTTP request, what should my backend do?"
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.auth import verify_password, create_access_token , get_current_user
+from Backend.app.security.auth import verify_password, create_access_token 
 from app.database import get_db
+from Backend.app.dependencies.current_user import get_current_user
 from app.models import User
 from app.schemas import UserSignup,UserLogin
-from app.auth import hash_password
+from Backend.app.security.auth import hash_password
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
