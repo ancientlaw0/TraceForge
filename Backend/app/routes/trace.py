@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Trace
@@ -10,32 +11,30 @@ from app.security.auth import get_current_api_user
 router = APIRouter( prefix="/traces", tags=["Traces"] )
 
 @router.post( "/", status_code=status.HTTP_201_CREATED )
-
-def create_trace(
+async def create_trace(
     trace: TraceCreate,
     auth: APIAuthContext = Depends(get_current_api_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
-    existing_trace = (
-        db.query(Trace)
-        .filter(Trace.trace_id == trace.trace_id)
-        .first()
+    result = await db.execute(
+        select(Trace).where(
+            Trace.trace_id == trace.trace_id
+        )
     )
-
+    existing_trace = result.scalar_one_or_none()
     if existing_trace:
         return {
             "message": "Trace already exists."
         }
-
     new_trace = Trace(
         **trace.model_dump(),
         user_id=auth.user.id,
         api_key_id=auth.api_key.id
     )
-    db.add(new_trace)
-    db.commit()
-    db.refresh(new_trace)
 
+    db.add(new_trace)
+    await db.commit()
+    await db.refresh(new_trace)
     return {
         "trace_id": new_trace.trace_id,
         "status": "stored"

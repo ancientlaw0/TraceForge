@@ -1,6 +1,6 @@
 # Configuring the databse road bwtween postgre and sql alchemy by creating connections
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker 
+from sqlalchemy.orm import declarative_base
 from dotenv import load_dotenv
 import os
 
@@ -8,20 +8,20 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_engine(DATABASE_URL)
+engine = create_async_engine(DATABASE_URL, echo=False)# echo is print every sql query ;ater we can put it true for debug
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
+SessionLocal = async_sessionmaker(
+    class_=AsyncSession,
+    expire_on_commit=False, # after commie it flushes all of the data then it needs reload after commit which isnt needed
+    bind=engine # autocommie no more on 2.0
 )
 
 Base = declarative_base() # collecting metadata
 
 
-def get_db():
+async def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
-        db.close()
+       await db.close()

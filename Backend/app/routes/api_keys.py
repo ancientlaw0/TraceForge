@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.database import get_db
 from app.models import APIKey, User
 from app.schemas.api_keys import APIKeyCreate, APIKeyResponse , APIKeyInfo
@@ -13,9 +14,9 @@ router = APIRouter( prefix="/api-keys", tags=["API Keys"] )
 @router.post(
     "/", response_model=APIKeyResponse, status_code=status.HTTP_201_CREATED
 )
-def create_api_key(
+async def create_api_key(
     api_key: APIKeyCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     # Generate plaintext key
@@ -28,35 +29,41 @@ def create_api_key(
     new_key = APIKey( user_id=current_user.id, name=api_key.name, key_hash=hashed_key )
 
     db.add(new_key)
-    db.commit()
-    db.refresh(new_key)
+    await db.commit()
+    await db.refresh(new_key)
     return APIKeyResponse( api_key=plain_key )
 
 
 @router.get( "/", response_model=List[APIKeyInfo] )
-def get_api_keys(
-    db: Session = Depends(get_db),
+async def get_api_keys(
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    api_keys = ( db.query(APIKey) .filter(APIKey.user_id == current_user.id) .all() )
+    result = await db.execute(
+    select(APIKey).where(
+        APIKey.user_id == current_user.id
+    )
+)
+
+    api_keys = result.scalars().all()  # as multiple rows
     return api_keys
 
 
 @router.delete( "/{key_id}", status_code=status.HTTP_204_NO_CONTENT )
-def revoke_api_key(
+async def revoke_api_key(
     key_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    api_key = (
-        db.query(APIKey)
-        .filter(
+    result = await db.execute(
+        select(APIKey).where(
             APIKey.id == key_id,
             APIKey.user_id == current_user.id
         )
-        .first() # first return one object 
     )
+
+    api_key = result.scalar_one_or_none()
 
     if api_key is None: raise HTTPException( status_code=status.HTTP_404_NOT_FOUND, detail="API Key not found." )
     api_key.is_active = False
-    db.commit()
+    await db.commit()
