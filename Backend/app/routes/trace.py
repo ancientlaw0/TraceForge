@@ -1,41 +1,23 @@
 from fastapi import APIRouter, Depends, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.database import get_db
-from app.models import Trace
+from app.kafka.producer import publish_event
+from app.kafka.topics import TRACE_TOPIC
 from app.schemas import TraceCreate
-from app.security.auth_context import APIAuthContext
+from app.security.auth_context import AuthContext
 from app.security.auth import get_current_api_user
 
 router = APIRouter( prefix="/traces", tags=["Traces"] )
 
-@router.post( "/", status_code=status.HTTP_201_CREATED )
+@router.post( "/", status_code=status.HTTP_202_ACCEPTED )
 async def create_trace(
     trace: TraceCreate,
-    auth: APIAuthContext = Depends(get_current_api_user),
-    db: AsyncSession = Depends(get_db)
+    auth: AuthContext = Depends(get_current_api_user),
 ):
-    result = await db.execute(
-        select(Trace).where(
-            Trace.trace_id == trace.trace_id
-        )
-    )
-    existing_trace = result.scalar_one_or_none()
-    if existing_trace:
-        return {
-            "message": "Trace already exists."
-        }
-    new_trace = Trace(
-        **trace.model_dump(),
-        user_id=auth.user.id,
-        api_key_id=auth.api_key.id
-    )
 
-    db.add(new_trace)
-    await db.commit()
-    await db.refresh(new_trace)
+    trace_event = { **trace.model_dump(), "user_id": auth.user, "api_key_id": auth.api_key, }
+
+    await publish_event( topic=TRACE_TOPIC, key=trace.trace_id, event=trace_event, )
+    
     return {
-        "trace_id": new_trace.trace_id,
-        "status": "stored"
+        "trace_id": trace.trace_id,
+        "status": "accepted",
     }

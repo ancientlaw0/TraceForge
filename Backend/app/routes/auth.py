@@ -1,5 +1,5 @@
 #"Someone makes an HTTP request, what should my backend do?"
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from Backend.app.security.auth import verify_password, create_access_token 
