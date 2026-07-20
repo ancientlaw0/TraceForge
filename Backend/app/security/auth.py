@@ -2,7 +2,7 @@ from pwdlib import PasswordHash
 from datetime import datetime, timedelta, timezone
 from jose import jwt
 from dotenv import load_dotenv
-import os
+from core.config import settings
 
 password_hasher = PasswordHash.recommended()
 
@@ -17,10 +17,10 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
+SECRET_KEY = settings.JWT_SECRET_KEY
+ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = int(
-    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
+    settings.ACCESS_TOKEN_EXPIRE_MINUTES
 )
 
 def create_access_token(user_id: int):
@@ -36,8 +36,8 @@ def create_access_token(user_id: int):
 
     token = jwt.encode(
         payload,
-        JWT_SECRET_KEY,
-        algorithm=ALGORITHM
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.ALGORITHM
     )
 
     return token
@@ -50,8 +50,8 @@ def verify_access_token(token: str):
     try:
         payload = jwt.decode(
             token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM]
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
         )
 
         return payload

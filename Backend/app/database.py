@@ -2,11 +2,11 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker 
 from sqlalchemy.orm import declarative_base
 from dotenv import load_dotenv
-import os
+from app.core.config import settings
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = settings.DATABASE_URL
 
 engine = create_async_engine(DATABASE_URL, echo=False)# echo is print every sql query ;ater we can put it true for debug
 

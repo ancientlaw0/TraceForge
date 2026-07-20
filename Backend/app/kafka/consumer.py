@@ -4,11 +4,10 @@ import logging
 
 from aiokafka import AIOKafkaConsumer
 from sqlalchemy.exc import SQLAlchemyError,IntegrityError
-
+from app.handlers import trace_handler
 from app.database import SessionLocal
 from app.models import Trace
-from app.kafka.topics import TRACE_TOPIC
-import os
+from core.config import settings
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -17,40 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 consumer = AIOKafkaConsumer(
-    TRACE_TOPIC,
-    bootstrap_servers="KAFKA_BOOTSTRAP_SERVERS",
-    group_id="TRACE_CONSUMER_GROUP",
+    settings.TRACE_TOPIC,
+    bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+    group_id=settings.TRACE_CONSUMER_GROUP,
     value_deserializer=lambda m: json.loads(m.decode("utf-8")),
 )
 
 
-async def process_trace(event: dict):
-    async with SessionLocal() as db:
-        try:
-            trace = Trace(**event)
-
-            db.add(trace)
-            await db.commit()
-
-            logger.info(f"Stored trace: {trace.trace_id}")
-
-        except SQLAlchemyError as e:
-            await db.rollback()
-            logger.exception(f"Database error: {e}")
-
-        except IntegrityError as e:
-            await db.rollback()
-
-            if "trace_id" in str(e.orig): # checks if we have actually the trace id error or just normal integrity error
-                logger.warning(
-                    f"Duplicate trace ignored: {event['trace_id']}"
-                )
-            else:
-                logger.exception(f"Integrity error: {e}")
-
-        except Exception as e:
-            logger.exception(f"Unexpected error: {e}")
-
+async def handle_event(event: dict): # renamed cause its not only trace but various eevent to handle  
+    await trace_handler.process(event)
 
 async def consume():
     await consumer.start()
@@ -58,7 +32,7 @@ async def consume():
 
     try:
         async for message in consumer:
-            await process_trace(message.value)
+            await handle_event(message.value)
 
     finally:
         await consumer.stop()

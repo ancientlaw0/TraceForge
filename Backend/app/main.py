@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from app.routes import auth, api_keys, trace
 from app.kafka.producer import start_producer, stop_producer
-
+from app.redis.client import redis_client
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -15,6 +15,15 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     await stop_producer()
+
+        # Startup
+    await redis_client.ping()
+    print("✅ Redis Connected")
+
+    yield
+
+    # Shutdown
+    await redis_client.close()
 
 
 app = FastAPI(
