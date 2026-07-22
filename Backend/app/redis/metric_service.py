@@ -1,7 +1,8 @@
 from redis.asyncio import Redis
+from app.redis.keys import totals_key,provider_key,    model_key,
 
 from app.redis.client import redis_client
-
+from .schemas import BUCKET_TTL
 
 class RedisMetricsService:
 
@@ -12,43 +13,80 @@ class RedisMetricsService:
 
         pipe = self.redis.pipeline()
 
-        self._update_totals(pipe, trace)
-        self._update_provider(pipe, trace)
-        self._update_model(pipe, trace)
-        self._update_status(pipe, trace)
+        keys = [
+            totals_key(
+                trace.user_id,
+                trace.created_at,
+            ),
+            provider_key(
+                trace.user_id,
+                trace.created_at,
+                trace.provider,
+            ),
+            model_key(
+                trace.user_id,
+                trace.created_at,
+                trace.model,
+            ),
+        ]
+
+        for key in keys:
+            self._update_metrics(pipe, key, trace)
 
         await pipe.execute()
-        
-    def _update_totals(self, pipe, trace):
 
-        key = totals_key(
-            trace.user_id,
-            trace.created_at,
-        )
-    
-    def _update_provider(self, pipe, trace):
+   
+    def _update_metrics(
+        self,
+        pipe,
+        key: str,
+        trace,
+    ):
+        pipe.hincrby(key, "requests", 1)
 
-        key = provider_key(
-            trace.user_id,
-            trace.created_at,
-            trace.provider,
-        )
-
-    def _update_model(self, pipe, trace):
-
-        key = model_key(
-            trace.user_id,
-            trace.created_at,
-            trace.model,
+        pipe.hincrby(
+            key,
+            trace.status.value,
+            1,
         )
 
-    def _update_status(self, pipe, trace):
-
-        key = status_key(
-            trace.user_id,
-            trace.created_at,
+        pipe.hincrbyfloat(
+            key,
+            "latency_sum",
+            trace.latency_ms,
         )
 
+        pipe.hincrby(
+            key,
+            "input_tokens",
+            trace.input_tokens,
+        )
+
+        pipe.hincrby(
+            key,
+            "output_tokens",
+            trace.output_tokens,
+        )
+
+        pipe.hincrby(
+            key,
+            "total_tokens",
+            trace.input_tokens + trace.output_tokens,
+        )
+
+        pipe.hincrbyfloat(
+            key,
+            "cost",
+            float(trace.cost),
+        )
+
+        pipe.expire(
+            key,
+            BUCKET_TTL,
+        )
+
+        # TODO:
+        # Update latency_max atomically
 
     
 redis_metrics = RedisMetricsService()

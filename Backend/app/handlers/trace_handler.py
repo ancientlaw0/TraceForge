@@ -14,7 +14,8 @@ async def process(event: dict):
 
             db.add(trace)
             await db.commit()
-            await redis_metrics.update(trace)
+            await db.refresh(trace)
+            await redis_metrics.process(trace)
 
             logger.info(f"Stored trace: {trace.trace_id}")
 

@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from app.routes import auth, api_keys, trace
 from app.kafka.producer import start_producer, stop_producer
 from app.redis.client import redis_client
+from app.alerts.routes import router as alert_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,7 +36,7 @@ app = FastAPI(
 app.include_router(auth.router)
 app.include_router(api_keys.router)
 app.include_router(trace.router)
-
+app.include_router(alert_router)
 
 @app.get("/")
 async def root():

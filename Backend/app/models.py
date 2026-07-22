@@ -17,6 +17,7 @@ class User(Base):
     )
     api_keys = relationship( "APIKey", back_populates="owner", cascade="all, delete-orphan" )
     traces = relationship( "Trace", back_populates="user", cascade="all, delete-orphan" )
+    alerts = relationship( "Alert", back_populates="user", cascade="all, delete-orphan", )
 
 class APIKey(Base):
     __tablename__ = "api_keys"
@@ -60,3 +61,44 @@ class Trace(Base):
 
     user = relationship( "User", back_populates="traces" )
     api_key = relationship( "APIKey", back_populates="traces" )
+
+
+class AlertMetric(enum.Enum):
+    LATENCY_AVG = "latency_avg"
+    LATENCY_MAX = "latency_max"
+    ERROR_RATE = "error_rate"
+    TIMEOUT_RATE = "timeout_rate"
+    COST = "cost"
+    TOTAL_TOKENS = "total_tokens"
+
+
+class AlertOperator(enum.Enum):
+    GREATER_THAN = ">"
+    GREATER_THAN_EQUAL = ">="
+    LESS_THAN = "<"
+    LESS_THAN_EQUAL = "<="
+
+
+class AlertWindow(enum.Enum):
+    FIVE = 5
+    FIFTEEN = 15
+    THIRTY = 30
+    SIXTY = 60
+    ONE_TWENTY = 120
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column( Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, )
+    metric = Column( Enum(AlertMetric), nullable=False, )
+    operator = Column( Enum(AlertOperator), nullable=False, default=AlertOperator.GREATER_THAN, )
+    threshold_value = Column( Numeric(12, 2), nullable=False, )
+    window_minutes = Column( Enum(AlertWindow), nullable=False, )
+    enabled = Column( Boolean, default=True, nullable=False, )
+    cooldown_minutes = Column( Integer, default=30, nullable=False, )
+    last_triggered_at = Column( DateTime(timezone=True), nullable=True, )
+    created_at = Column( DateTime(timezone=True), server_default=func.now(), nullable=False, )
+
+    user = relationship( "User", back_populates="alerts", )
