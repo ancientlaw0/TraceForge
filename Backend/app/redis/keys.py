@@ -54,3 +54,10 @@ def status_key(
 
 def alert_key(user_id: int) -> str:
     return f"{ALERTS_PREFIX}:{user_id}"
+
+def providers_set_key(user_id):
+    return f"metrics:{user_id}:providers"
+
+
+def models_set_key(user_id):
+    return f"metrics:{user_id}:models"

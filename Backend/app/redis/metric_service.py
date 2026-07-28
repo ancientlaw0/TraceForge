@@ -3,6 +3,7 @@ from app.redis.keys import totals_key,provider_key,    model_key,
 
 from app.redis.client import redis_client
 from .schemas import BUCKET_TTL
+from .keys import models_set_key, providers_set_key
 
 class RedisMetricsService:
 
@@ -33,6 +34,15 @@ class RedisMetricsService:
         for key in keys:
             self._update_metrics(pipe, key, trace)
 
+        pipe.sadd(
+            providers_set_key(trace.user_id),
+            trace.provider,
+        )
+
+        pipe.sadd(
+            models_set_key(trace.user_id),
+            trace.model,
+        )
         await pipe.execute()
 
    
