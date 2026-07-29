@@ -1,0 +1,39 @@
+from openai import OpenAI
+from app.core.config import settings
+
+
+class LLMClient:
+    def __init__(self):
+        self.client = OpenAI(
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_key=settings.NVIDIA_API_KEY,
+        )
+
+        # Change this later if you want another model
+        self.model = settings.LLM_MODEL
+
+    def generate(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.2,
+        max_tokens: int = 1024,
+    ) -> str:
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt,
+                },
+            ],
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+        return response.choices[0].message.content.strip()

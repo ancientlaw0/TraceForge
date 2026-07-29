@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     SMTP_HOST:str
     SMTP_PORT: int
 
+    NVIDIA_API_KEY: str
+    LLM_MODEL: str 
+
     model_config = SettingsConfigDict(
         env_file=(
             "app/.env",
