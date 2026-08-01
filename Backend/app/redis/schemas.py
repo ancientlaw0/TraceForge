@@ -58,3 +58,11 @@ STATUS_FIELDS = (
     "error",
     "timeout",
 )
+
+MINUTE_BUCKET_TTL = 2 * 24 * 3600
+HOUR_BUCKET_TTL = 7 * 24 * 3600
+DAY_BUCKET_TTL = 35 * 24 * 3600
+
+MINUTE_USAGE_FORMAT = "%Y%m%d%H%M"
+HOUR_USAGE_FORMAT = "%Y%m%d%H"
+DAY_USAGE_FORMAT = "%Y%m%d"

@@ -18,6 +18,7 @@ class User(Base):
     api_keys = relationship( "APIKey", back_populates="owner", cascade="all, delete-orphan" )
     traces = relationship( "Trace", back_populates="user", cascade="all, delete-orphan" )
     alerts = relationship( "Alert", back_populates="user", cascade="all, delete-orphan", )
+    usage_limit = relationship( "UsageLimit", back_populates="user", uselist=False, cascade="all, delete-orphan", )
 
 class APIKey(Base):
     __tablename__ = "api_keys"
@@ -102,3 +103,21 @@ class Alert(Base):
     created_at = Column( DateTime(timezone=True), server_default=func.now(), nullable=False, )
 
     user = relationship( "User", back_populates="alerts", )
+
+
+class UsageLimit(Base):
+    __tablename__ = "usage_limits"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column( Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True, )
+    enabled = Column( Boolean, nullable=False, default=True, )
+    max_requests_per_minute = Column( Integer, nullable=True, )
+    max_requests_per_hour = Column( Integer, nullable=True, )
+    max_requests_per_day = Column( Integer, nullable=True, )
+    max_input_tokens_per_day = Column( Integer, nullable=True, )
+    max_output_tokens_per_day = Column( Integer, nullable=True, )
+    max_cost_per_day = Column( Numeric(10, 4), nullable=True, )
+    block_on_limit = Column( Boolean, nullable=False, default=True, )
+    created_at = Column( DateTime(timezone=True), server_default=func.now(), nullable=False, )
+    updated_at = Column( DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False, )
+
+    user = relationship( "User", back_populates="usage_limit", )

@@ -61,3 +61,29 @@ def providers_set_key(user_id):
 
 def models_set_key(user_id):
     return f"metrics:{user_id}:models"
+
+USAGE_PREFIX = "usage"
+
+
+def usage_minute_key(
+    user_id: int,
+    timestamp: datetime,
+):
+    bucket = timestamp.strftime("%Y%m%d%H%M")
+    return f"{USAGE_PREFIX}:{user_id}:minute:{bucket}"
+
+
+def usage_hour_key(
+    user_id: int,
+    timestamp: datetime,
+):
+    bucket = timestamp.strftime("%Y%m%d%H")
+    return f"{USAGE_PREFIX}:{user_id}:hour:{bucket}"
+
+
+def usage_day_key(
+    user_id: int,
+    timestamp: datetime,
+):
+    bucket = timestamp.strftime("%Y%m%d")
+    return f"{USAGE_PREFIX}:{user_id}:day:{bucket}"
