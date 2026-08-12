@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes import auth, api_keys, trace
 from app.kafka.producer import start_producer, stop_producer
@@ -10,24 +11,20 @@ from app.live.routes import router as live_router
 from app.chat.routes import router as chat_router
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+
     # Startup
     await start_producer()
 
-    yield # prt that tells go do your work it is initialised
+    await redis_client.ping()
+    print(" Redis Connected")
+
+    yield  #prt that tells go do your work it is initialised
+
 
     # Shutdown
     await stop_producer()
-
-        # Startup
-    await redis_client.ping()
-    print("✅ Redis Connected")
-
-    yield
-
-    # Shutdown
     await redis_client.close()
 
 
@@ -36,12 +33,23 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 app.include_router(auth.router)
 app.include_router(api_keys.router)
 app.include_router(trace.router)
 app.include_router(alert_router)
 app.include_router(live_router)
 app.include_router(chat_router)
+
 
 @app.get("/")
 async def root():

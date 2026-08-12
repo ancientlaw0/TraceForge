@@ -36,7 +36,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_file=(
-            "app/.env",
+            ".env",
         ),
         extra="ignore",
     )

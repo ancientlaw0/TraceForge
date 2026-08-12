@@ -2,7 +2,7 @@ from pwdlib import PasswordHash
 from datetime import datetime, timedelta, timezone
 from jose import jwt
 from dotenv import load_dotenv
-from core.config import settings
+from app.core.config import settings
 
 password_hasher = PasswordHash.recommended()
 
