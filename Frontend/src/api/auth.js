@@ -1,5 +1,6 @@
 import api from "./client";
 
+
 export async function signup(email, password) {
     const response = await api.post("/auth/signup", {
         email,
@@ -8,6 +9,7 @@ export async function signup(email, password) {
 
     return response.data;
 }
+
 
 export async function login(email, password) {
     const response = await api.post("/auth/login", {
@@ -18,12 +20,9 @@ export async function login(email, password) {
     return response.data;
 }
 
-export async function getMe(token) {
-    const response = await api.get("/auth/me", {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
+
+export async function getMe() {
+    const response = await api.get("/auth/me");
 
     return response.data;
 }

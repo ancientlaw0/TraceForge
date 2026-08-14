@@ -1,8 +1,8 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
 
 class APIKeyCreate(BaseModel): # creatig an api key
-    name: str
+    name: str = Field(min_length=1,max_length=100)
 
 class APIKeyResponse(BaseModel): #key you see once at the frontend
     api_key: str
