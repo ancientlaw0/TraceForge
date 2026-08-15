@@ -7,6 +7,7 @@ import {
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import APIKeys from "./pages/APIKeys";
+import Analytics from "./pages/Analytics";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -42,6 +43,11 @@ function App() {
                         path="/api-keys"
                         element={<APIKeys />}
                     />
+
+                        <Route
+                        path="/analytics"
+                        element={<Analytics />}
+    />
 
                 </Route>
 

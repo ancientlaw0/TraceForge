@@ -6,8 +6,11 @@ from app.schemas.traces import TraceStatus
 class SummaryResponse(BaseModel):
     total_requests: int
     successful_requests: int
-    failed_requests: int
+    error_requests: int
+    timeout_requests: int
     success_rate: float
+    error_rate: float
+    timeout_rate: float
     total_cost: float
     total_input_tokens: int
     total_output_tokens: int
@@ -42,48 +45,43 @@ class AnalyticsFilter(BaseModel):
 class ModelAnalyticsResponse(BaseModel):
     provider: str
     model: str
-
     requests: int
     successful_requests: int
-    failed_requests: int
-
+    error_requests: int
+    timeout_requests: int
     average_latency: float
     p95_latency: float
-
     total_cost: float
-
     total_input_tokens: int
     total_output_tokens: int
-
     error_rate: float
+    timeout_rate: float
 
 from pydantic import BaseModel
 
 
 class ProviderAnalyticsResponse(BaseModel):
     provider: str
-
     requests: int
     successful_requests: int
-    failed_requests: int
-
+    error_requests: int
+    timeout_requests: int
     average_latency: float
     p95_latency: float
-
     total_cost: float
-
     total_input_tokens: int
     total_output_tokens: int
-
     error_rate: float
-
+    timeout_rate: float
 
 class TimeSeriesResponse(BaseModel):
     timestamp: datetime
 
     requests: int
+
     successful_requests: int
-    failed_requests: int
+    error_requests: int
+    timeout_requests: int
 
     average_latency: float
 
