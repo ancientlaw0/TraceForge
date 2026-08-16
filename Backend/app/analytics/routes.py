@@ -3,14 +3,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .schemas import ModelAnalyticsResponse
 from app.dependencies.current_user import get_current_user
 from app.database import get_db
-from analytics.schemas import AnalyticsFilter,ProviderAnalyticsResponse,ErrorAnalyticsResponse,TimeSeriesResponse
+from app.analytics.schemas import AnalyticsFilter,ProviderAnalyticsResponse,ErrorAnalyticsResponse,TimeSeriesResponse
 from app.models import User
-from service.models import get_models
-from service.overview import get_overview
-from service.providers import get_providers
+from app.analytics.service.models import get_models
+from app.analytics.service.overview import get_overview
+from app.analytics.service.providers import get_providers
 from .schemas import OverviewResponse
-from service.errors import get_error_analytics
-from service.timeseries import get_timeseries
+from .service.errors import get_error_analytics
+from .service.timeseries import get_timeseries
 
 router = APIRouter( prefix="/analytics", tags=["Analytics"] )
 

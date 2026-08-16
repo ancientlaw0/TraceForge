@@ -8,6 +8,10 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import APIKeys from "./pages/APIKeys";
 import Analytics from "./pages/Analytics";
+import Live from "./pages/Live";
+import Chat from "./pages/Chat";
+import Alerts from "./pages/Alerts";
+import UsageLimits from "./pages/Usage";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -47,7 +51,39 @@ function App() {
                         <Route
                         path="/analytics"
                         element={<Analytics />}
-    />
+                    />
+
+                    <Route
+                        path="/live"
+                        element={<Live />}
+                    />
+
+                    <Route
+                        path="/chat"
+                        element={
+                            <ProtectedRoute>
+                                <Chat />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/alerts"
+                        element={
+                            <ProtectedRoute>
+                                <Alerts />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/usage"
+                        element={
+                            <ProtectedRoute>
+                                <Usage />
+                            </ProtectedRoute>
+                        }
+                    />
 
                 </Route>
 

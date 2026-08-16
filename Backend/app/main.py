@@ -9,6 +9,8 @@ from app.redis.client import redis_client
 from app.alerts.routes import router as alert_router
 from app.live.routes import router as live_router
 from app.chat.routes import router as chat_router
+from app.analytics.routes import router as analytics_router
+from app.usage.routes import router as usage_router
 
 
 @asynccontextmanager
@@ -49,7 +51,8 @@ app.include_router(trace.router)
 app.include_router(alert_router)
 app.include_router(live_router)
 app.include_router(chat_router)
-
+app.include_router(analytics_router)
+app.include_router(usage_router)
 
 @app.get("/")
 async def root():

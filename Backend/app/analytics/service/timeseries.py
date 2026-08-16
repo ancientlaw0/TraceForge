@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Trace, User
 from app.models import TraceStatus
 
-from filters import apply_trace_filters
-from analytics.schemas import (
+from app.analytics.filters import apply_trace_filters
+from app.analytics.schemas import (
     AnalyticsFilter,
     TimeSeriesResponse,
     TimeFilter,

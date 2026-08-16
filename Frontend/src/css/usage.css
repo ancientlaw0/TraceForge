@@ -1,0 +1,420 @@
+.usage-page {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px;
+    box-sizing: border-box;
+}
+
+.usage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+.usage-header h1 {
+    margin: 0;
+    font-size: 32px;
+}
+
+.usage-header p {
+    margin-top: 8px;
+    opacity: 0.65;
+}
+
+.primary-button {
+    border: none;
+    border-radius: 8px;
+    padding: 11px 18px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.primary-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* ================================
+   STATUS
+================================ */
+
+.usage-status-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    gap: 20px;
+
+    padding: 22px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+
+    margin-bottom: 20px;
+}
+
+.usage-status-card div {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.usage-status-card span {
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+.status-enabled {
+    font-size: 18px;
+}
+
+.status-disabled {
+    font-size: 18px;
+    opacity: 0.55;
+}
+
+
+/* ================================
+   LIMIT CARDS
+================================ */
+
+.limits-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 20px;
+}
+
+.limit-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+
+    padding: 22px;
+}
+
+.limit-card h2 {
+    margin-top: 0;
+    font-size: 18px;
+}
+
+.limit-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.limit-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.limit-row span {
+    opacity: 0.65;
+}
+
+.limit-row strong {
+    text-align: right;
+}
+
+
+/* ================================
+   META
+================================ */
+
+.usage-meta {
+    display: flex;
+    gap: 24px;
+
+    margin-top: 20px;
+
+    font-size: 12px;
+    opacity: 0.55;
+}
+
+
+/* ================================
+   ACTIONS
+================================ */
+
+.usage-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin-top: 25px;
+}
+
+.usage-actions button,
+.usage-form-actions button,
+.modal-actions button {
+    padding: 10px 16px;
+
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+
+    background: transparent;
+
+    cursor: pointer;
+}
+
+.danger-button {
+    border: none !important;
+    background: #b42318 !important;
+    color: white;
+}
+
+
+/* ================================
+   FORM
+================================ */
+
+.usage-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.usage-form section {
+    padding: 22px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+}
+
+.usage-form h2 {
+    margin-top: 0;
+    margin-bottom: 8px;
+
+    font-size: 19px;
+}
+
+.section-description {
+    font-size: 13px;
+    opacity: 0.6;
+    margin-bottom: 20px;
+}
+
+.number-field {
+    display: flex;
+    flex-direction: column;
+
+    gap: 7px;
+
+    margin-top: 16px;
+}
+
+.number-field span {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.number-field input {
+    padding: 10px 12px;
+
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+
+    font: inherit;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    margin-top: 14px;
+
+    font-size: 14px;
+}
+
+.checkbox-row input {
+    width: auto;
+}
+
+.usage-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+
+/* ================================
+   EMPTY
+================================ */
+
+.usage-empty {
+    min-height: 300px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 30px;
+
+    padding: 35px;
+
+    border: 1px dashed #d1d5db;
+    border-radius: 14px;
+}
+
+.usage-empty h2 {
+    margin-top: 0;
+}
+
+.usage-empty p {
+    opacity: 0.65;
+}
+
+
+/* ================================
+   ERRORS
+================================ */
+
+.usage-error {
+    padding: 16px;
+
+    margin-bottom: 20px;
+
+    border: 1px solid #efb4b4;
+    border-radius: 10px;
+
+    background: #fff5f5;
+}
+
+.usage-error p {
+    margin: 6px 0 12px;
+}
+
+.form-error {
+    padding: 12px;
+
+    border: 1px solid #efb4b4;
+    border-radius: 8px;
+
+    background: #fff5f5;
+    color: #b42318;
+}
+
+
+/* ================================
+   LOADING
+================================ */
+
+.usage-loading {
+    min-height: 400px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+}
+
+
+/* ================================
+   MODAL
+================================ */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.delete-modal {
+    width: 100%;
+    max-width: 420px;
+
+    padding: 25px;
+
+    background: white;
+
+    border-radius: 14px;
+}
+
+.delete-modal h2 {
+    margin-top: 0;
+}
+
+.delete-modal p {
+    opacity: 0.7;
+    line-height: 1.5;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin-top: 25px;
+}
+
+.modal-actions button:disabled,
+.usage-actions button:disabled,
+.usage-form-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* ================================
+   RESPONSIVE
+================================ */
+
+@media (max-width: 900px) {
+
+    .limits-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+
+@media (max-width: 650px) {
+
+    .usage-page {
+        padding: 20px;
+    }
+
+    .usage-header {
+        flex-direction: column;
+    }
+
+    .usage-status-card {
+        grid-template-columns: 1fr;
+    }
+
+    .usage-empty {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .usage-meta {
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .usage-actions {
+        flex-direction: column;
+    }
+
+    .usage-actions button {
+        width: 100%;
+    }
+
+}
