@@ -1,5 +1,5 @@
 from redis.asyncio import Redis
-from app.redis.keys import totals_key,provider_key,    model_key,
+from app.redis.keys import totals_key,provider_key,    model_key
 
 from app.redis.client import redis_client
 from .schemas import BUCKET_TTL

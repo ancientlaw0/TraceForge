@@ -9,7 +9,9 @@ from app.analytics.service.models import get_models
 from app.analytics.service.overview import get_overview
 from app.analytics.service.providers import get_providers
 from .schemas import OverviewResponse
-from .service.errors import get_error_analytics
+from app.analytics.service.errors import (
+    get_error_analytics as get_error_analytics_service,
+)
 from .service.timeseries import get_timeseries
 
 router = APIRouter( prefix="/analytics", tags=["Analytics"] )
@@ -99,7 +101,7 @@ async def get_error_analytics(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await get_error_analytics(
+    return await get_error_analytics_service(
         db=db,
         user=current_user,
         filters=filters,

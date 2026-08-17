@@ -16,7 +16,7 @@ import {
     Legend,
 } from "recharts";
 
-import "../styles/live.css";
+import "../css/live.css";
 
 
 function Live() {

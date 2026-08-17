@@ -7,6 +7,8 @@ from app.redis.keys import (
     usage_hour_key,
     usage_minute_key,
 )
+
+from app.redis.keys import rate_limit_minute_key
 from app.redis.schemas import (
     DAY_BUCKET_TTL,
     HOUR_BUCKET_TTL,
@@ -179,6 +181,53 @@ class RedisUsageService:
                 )
             ),
         }
+
+    async def reserve_minute_request(
+        self,
+        user_id: int,
+        timestamp,
+        limit: int,
+    ) -> bool:
+
+        key = rate_limit_minute_key(
+            user_id,
+            timestamp,
+        )
+
+        script = """
+        local count = redis.call(
+            'INCR',
+            KEYS[1]
+        )
+
+        if count == 1 then
+            redis.call(
+                'EXPIRE',
+                KEYS[1],
+                60
+            )
+        end
+
+        if count > tonumber(ARGV[1]) then
+            redis.call(
+                'DECR',
+                KEYS[1]
+            )
+
+            return 0
+        end
+
+        return 1
+        """
+
+        result = await self.redis.eval(
+            script,
+            1,
+            key,
+            limit,
+        )
+
+        return bool(result)
 
 
 redis_usage = RedisUsageService()

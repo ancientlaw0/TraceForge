@@ -1,19 +1,23 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from fastapi import HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.redis.usage import redis_usage
-from .repository import usage_repository
+from app.usage.repository import UsageRepository
 
 
 class UsageLimiter:
 
     async def check(
         self,
+        db: AsyncSession,
         user_id: int,
     ):
+        repository = UsageRepository(db)
 
-        limits = await usage_repository.get_by_user_id(
+        limits = await repository.get_by_user_id(
             user_id,
         )
 
@@ -23,8 +27,33 @@ class UsageLimiter:
         if not limits.enabled:
             return
 
+        now = datetime.now(timezone.utc)
+
+        # -------------------------
+        # Request admission
+        # -------------------------
+
+        if limits.max_requests_per_minute is not None:
+
+            allowed = await redis_usage.reserve_minute_request(
+                user_id=user_id,
+                timestamp=now,
+                limit=limits.max_requests_per_minute,
+            )
+
+            if not allowed:
+                self._raise(
+                    "Minute request limit exceeded.",
+                    limits,
+                )
+
+        # -------------------------
+        # Existing usage accounting
+        # -------------------------
+
         usage = await redis_usage.get_usage(
             user_id=user_id,
+            timestamp=now,
         )
 
         self._check_requests(
@@ -47,17 +76,7 @@ class UsageLimiter:
         limits,
         usage,
     ):
-
-        if (
-            limits.max_requests_per_minute is not None
-            and usage["minute"]["requests"]
-            >= limits.max_requests_per_minute
-        ):
-            self._raise(
-                "Minute request limit exceeded.",
-                limits,
-            )
-
+        # Hourly limit
         if (
             limits.max_requests_per_hour is not None
             and usage["hour"]["requests"]
@@ -68,6 +87,7 @@ class UsageLimiter:
                 limits,
             )
 
+        # Daily limit
         if (
             limits.max_requests_per_day is not None
             and usage["day"]["requests"]
@@ -83,7 +103,6 @@ class UsageLimiter:
         limits,
         usage,
     ):
-
         if (
             limits.max_input_tokens_per_day is not None
             and usage["day"]["input_tokens"]
@@ -109,7 +128,6 @@ class UsageLimiter:
         limits,
         usage,
     ):
-
         if (
             limits.max_cost_per_day is not None
             and Decimal(str(usage["day"]["cost"]))
@@ -125,7 +143,6 @@ class UsageLimiter:
         message: str,
         limits,
     ):
-
         if not limits.block_on_limit:
             return
 

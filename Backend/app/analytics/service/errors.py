@@ -1,12 +1,13 @@
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Trace, TraceStatus
-from app.models import User
+from app.models import Trace, TraceStatus, User
 
 from app.analytics.filters import apply_trace_filters
-from app.analytics.schemas import ErrorAnalyticsResponse,AnalyticsFilter
-
+from app.analytics.schemas import (
+    ErrorAnalyticsResponse,
+    AnalyticsFilter,
+)
 
 
 async def get_error_analytics(
@@ -21,7 +22,7 @@ async def get_error_analytics(
             func.count(Trace.trace_id).label("count"),
         )
         .where(
-            Trace.status == TraceStatus.FAILED,
+            Trace.status == TraceStatus.ERROR,
             Trace.error_message.is_not(None),
         )
     )
@@ -33,11 +34,13 @@ async def get_error_analytics(
     )
 
     stmt = (
-        stmt.group_by(Trace.error_message)
+        stmt
+        .group_by(Trace.error_message)
         .order_by(desc("count"))
     )
 
     result = await db.execute(stmt)
+
     rows = result.all()
 
     return [

@@ -87,3 +87,19 @@ def usage_day_key(
 ):
     bucket = timestamp.strftime("%Y%m%d")
     return f"{USAGE_PREFIX}:{user_id}:day:{bucket}"
+
+
+
+RATE_LIMIT_PREFIX = "ratelimit"
+
+
+def rate_limit_minute_key(
+    user_id: int,
+    timestamp: datetime,
+) -> str:
+    bucket = timestamp.strftime("%Y%m%d%H%M")
+
+    return (
+        f"{RATE_LIMIT_PREFIX}:"
+        f"{user_id}:minute:{bucket}"
+    )

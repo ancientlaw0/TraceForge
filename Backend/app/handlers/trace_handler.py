@@ -1,5 +1,5 @@
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from database import SessionLocal
+from app.database import SessionLocal
 from app.models import Trace
 from app.redis.metric_service import redis_metrics
 import logging

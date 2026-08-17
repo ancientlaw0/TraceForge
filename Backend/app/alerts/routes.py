@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies.current_user import get_current_user
@@ -17,6 +17,7 @@ from app.alerts.service import (
     delete_alert,
 )
 
+
 router = APIRouter(
     prefix="/alerts",
     tags=["Alerts"],
@@ -28,48 +29,59 @@ router = APIRouter(
     response_model=AlertResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create(
+async def create(
     alert: AlertCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return create_alert(db, current_user, alert)
+    return await create_alert(
+        db,
+        current_user,
+        alert,
+    )
 
 
 @router.get(
     "/",
     response_model=list[AlertResponse],
 )
-def list_alerts(
-    db: Session = Depends(get_db),
+async def list_alerts(
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return get_user_alerts(db, current_user)
+    return await get_user_alerts(
+        db,
+        current_user,
+    )
 
 
 @router.get(
     "/{alert_id}",
     response_model=AlertResponse,
 )
-def get(
+async def get(
     alert_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return get_alert(db, current_user, alert_id)
+    return await get_alert(
+        db,
+        current_user,
+        alert_id,
+    )
 
 
 @router.patch(
     "/{alert_id}",
     response_model=AlertResponse,
 )
-def update(
+async def update(
     alert_id: int,
     alert: AlertUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return update_alert(
+    return await update_alert(
         db,
         current_user,
         alert_id,
@@ -81,9 +93,13 @@ def update(
     "/{alert_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def delete(
+async def delete(
     alert_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    delete_alert(db, current_user, alert_id)
+    await delete_alert(
+        db,
+        current_user,
+        alert_id,
+    )

@@ -17,7 +17,7 @@ async def start_producer() -> None:
     producer = AIOKafkaProducer(
         bootstrap_servers=BOOTSTRAP_SERVERS,
         value_serializer=lambda value: json.dumps(value).encode("utf-8"),
-        key_serializer=lambda key: key.encode("utf-8"),
+        key_serializer=lambda key: str(key).encode("utf-8"),
     )
     await producer.start()
 

@@ -11,7 +11,7 @@ import Analytics from "./pages/Analytics";
 import Live from "./pages/Live";
 import Chat from "./pages/Chat";
 import Alerts from "./pages/Alerts";
-import UsageLimits from "./pages/Usage";
+import Usage from "./pages/Usage";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 

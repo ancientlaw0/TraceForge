@@ -47,6 +47,22 @@ Columns:
 
 ----------------------------------------
 
+IMPORTANT:
+The traces.status column is a PostgreSQL enum.
+
+The ONLY valid status values are:
+- 'success'
+- 'error'
+- 'timeout'
+
+There is NO 'failed' status.
+
+Status meaning:
+- 'success' = request completed successfully
+- 'error' = request failed with an error
+- 'timeout' = request timed out
+
+
 Table: alerts
 Columns:
 - id

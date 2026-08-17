@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError,IntegrityError
 from app.handlers import trace_handler
 from app.database import SessionLocal
 from app.models import Trace
-from core.config import settings
+from app.core.config import settings
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -15,18 +15,20 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-consumer = AIOKafkaConsumer(
-    settings.TRACE_TOPIC,
-    bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-    group_id=settings.TRACE_CONSUMER_GROUP,
-    value_deserializer=lambda m: json.loads(m.decode("utf-8")),
-)
-
 
 async def handle_event(event: dict): # renamed cause its not only trace but various eevent to handle  
     await trace_handler.process(event)
 
 async def consume():
+
+    
+    consumer = AIOKafkaConsumer(
+        settings.TRACE_TOPIC,
+        bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+        group_id=settings.TRACE_CONSUMER_GROUP,
+        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+    )
+
     await consumer.start()
     logger.info("Consumer started...")
 

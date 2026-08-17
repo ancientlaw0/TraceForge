@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { sendMessage } from "../api/chat";
-import "../styles/chat.css";
+import "../css/chat.css";
 
 
 function Chat() {

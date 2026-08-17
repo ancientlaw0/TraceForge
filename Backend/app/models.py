@@ -55,7 +55,15 @@ class Trace(Base):
     input_tokens = Column( Integer, nullable=False )
     output_tokens = Column( Integer, nullable=False )
     cost = Column( Numeric(10,6), nullable=False )
-    status = Column( Enum(TraceStatus), nullable=False )
+    status = Column(
+        Enum(
+            TraceStatus,
+            values_callable=lambda enum_class: [
+                member.value for member in enum_class
+            ],
+        ),
+        nullable=False,
+    )
     error_message = Column( Text, nullable=True )
     metadata_trace = Column( JSON, nullable=True )
     created_at = Column( DateTime(timezone=True), server_default=func.now(), nullable=False )
@@ -80,7 +88,7 @@ class AlertOperator(enum.Enum):
     LESS_THAN_EQUAL = "<="
 
 
-class AlertWindow(enum.Enum):
+class AlertWindow(int, enum.Enum):
     FIVE = 5
     FIFTEEN = 15
     THIRTY = 30
@@ -96,7 +104,7 @@ class Alert(Base):
     metric = Column( Enum(AlertMetric), nullable=False, )
     operator = Column( Enum(AlertOperator), nullable=False, default=AlertOperator.GREATER_THAN, )
     threshold_value = Column( Numeric(12, 2), nullable=False, )
-    window_minutes = Column( Enum(AlertWindow), nullable=False, )
+    window_minutes = Column(Integer, nullable=False)
     enabled = Column( Boolean, default=True, nullable=False, )
     cooldown_minutes = Column( Integer, default=30, nullable=False, )
     last_triggered_at = Column( DateTime(timezone=True), nullable=True, )

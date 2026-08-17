@@ -6,7 +6,7 @@ import {
     deleteUsageLimits,
 } from "../api/usage";
 
-import "../styles/usage.css";
+import "../css/usage.css";
 
 
 const DEFAULT_FORM = {

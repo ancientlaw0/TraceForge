@@ -7,7 +7,7 @@ import {
     deleteAlert,
 } from "../api/alerts";
 
-import "../styles/alerts.css";
+import "../css/alerts.css";
 
 
 const METRICS = [

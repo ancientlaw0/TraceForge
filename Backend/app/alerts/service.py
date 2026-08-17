@@ -1,48 +1,63 @@
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Alert, User
 from app.alerts.schemas import AlertCreate, AlertUpdate
 
-def create_alert(
-    db: Session,
+
+async def create_alert(
+    db: AsyncSession,
     user: User,
     alert_data: AlertCreate,
 ) -> Alert:
 
-    alert = Alert( user_id=user.id, **alert_data.model_dump(), )
+    alert = Alert(
+        user_id=user.id,
+        **alert_data.model_dump(),
+    )
 
     db.add(alert)
-    db.commit()
-    db.refresh(alert)
+
+    await db.commit()
+    await db.refresh(alert)
 
     return alert
 
-def get_user_alerts(
-    db: Session,
+
+async def get_user_alerts(
+    db: AsyncSession,
     user: User,
 ) -> list[Alert]:
 
-    return (
-        db.query(Alert)
-        .filter(Alert.user_id == user.id)
-        .all()
+    stmt = (
+        select(Alert)
+        .where(Alert.user_id == user.id)
+        .order_by(Alert.created_at.desc())
     )
 
-def get_alert(
-    db: Session,
+    result = await db.execute(stmt)
+
+    return result.scalars().all()
+
+
+async def get_alert(
+    db: AsyncSession,
     user: User,
     alert_id: int,
 ) -> Alert:
 
-    alert = (
-        db.query(Alert)
-        .filter(
+    stmt = (
+        select(Alert)
+        .where(
             Alert.id == alert_id,
             Alert.user_id == user.id,
         )
-        .first()
     )
+
+    result = await db.execute(stmt)
+
+    alert = result.scalar_one_or_none()
 
     if not alert:
         raise HTTPException(
@@ -52,14 +67,19 @@ def get_alert(
 
     return alert
 
-def update_alert(
-    db: Session,
+
+async def update_alert(
+    db: AsyncSession,
     user: User,
     alert_id: int,
     alert_update: AlertUpdate,
 ) -> Alert:
 
-    alert = get_alert(db, user, alert_id)
+    alert = await get_alert(
+        db,
+        user,
+        alert_id,
+    )
 
     update_data = alert_update.model_dump(
         exclude_unset=True
@@ -68,18 +88,23 @@ def update_alert(
     for key, value in update_data.items():
         setattr(alert, key, value)
 
-    db.commit()
-    db.refresh(alert)
+    await db.commit()
+    await db.refresh(alert)
 
     return alert
 
-def delete_alert(
-    db: Session,
+
+async def delete_alert(
+    db: AsyncSession,
     user: User,
     alert_id: int,
 ) -> None:
 
-    alert = get_alert(db, user, alert_id)
+    alert = await get_alert(
+        db,
+        user,
+        alert_id,
+    )
 
-    db.delete(alert)
-    db.commit()
+    await db.delete(alert)
+    await db.commit()
