@@ -1,27 +1,13 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.database import get_db
 from app.dependencies.current_user import get_current_user
 from app.models import User
-from app.alerts.schemas import (
-    AlertCreate,
-    AlertUpdate,
-    AlertResponse,
-)
-from app.alerts.service import (
-    create_alert,
-    get_alert,
-    get_user_alerts,
-    update_alert,
-    delete_alert,
-)
+from app.alerts.schemas import AlertCreate, AlertUpdate, AlertResponse
+from app.alerts.service import create_alert, get_alert, get_user_alerts, update_alert, delete_alert
 
 
-router = APIRouter(
-    prefix="/alerts",
-    tags=["Alerts"],
-)
+router = APIRouter( prefix="/alerts", tags=["Alerts"], )
 
 
 @router.post(
@@ -34,11 +20,7 @@ async def create(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await create_alert(
-        db,
-        current_user,
-        alert,
-    )
+    return await create_alert( db, current_user, alert, )
 
 
 @router.get(
@@ -49,10 +31,7 @@ async def list_alerts(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await get_user_alerts(
-        db,
-        current_user,
-    )
+    return await get_user_alerts( db, current_user, )
 
 
 @router.get(
@@ -64,11 +43,7 @@ async def get(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await get_alert(
-        db,
-        current_user,
-        alert_id,
-    )
+    return await get_alert( db, current_user, alert_id, )
 
 
 @router.patch(
@@ -81,12 +56,7 @@ async def update(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await update_alert(
-        db,
-        current_user,
-        alert_id,
-        alert,
-    )
+    return await update_alert( db, current_user, alert_id, alert, )
 
 
 @router.delete(
@@ -98,8 +68,4 @@ async def delete(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    await delete_alert(
-        db,
-        current_user,
-        alert_id,
-    )
+    await delete_alert( db, current_user, alert_id, )

@@ -8,11 +8,11 @@ load_dotenv()
 
 DATABASE_URL = settings.DATABASE_URL
 
-engine = create_async_engine(DATABASE_URL, echo=False)# echo is print every sql query ;ater we can put it true for debug
+engine = create_async_engine(DATABASE_URL, echo=False)# echo is print every sql query later we can put it true for debug
 
 SessionLocal = async_sessionmaker(
     class_=AsyncSession,
-    expire_on_commit=False, # after commie it flushes all of the data then it needs reload after commit which isnt needed
+    expire_on_commit=False, # after commit it flushes all of the data then it needs reload after commit which isnt needed
     bind=engine # autocommie no more on 2.0
 )
 

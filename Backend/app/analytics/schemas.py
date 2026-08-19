@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from enum import Enum
 from datetime import datetime
-from app.schemas.traces import TraceStatus
+from app.auth.schemas.traces import TraceStatus
 
 class SummaryResponse(BaseModel):
     total_requests: int

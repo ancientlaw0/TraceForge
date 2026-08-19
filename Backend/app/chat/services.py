@@ -1,3 +1,4 @@
+from http.client import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.llm.client import LLMClient
 from .database import ChatDatabase
@@ -14,24 +15,22 @@ class ChatService:
         user_id: int,
         message: str,
     ) -> str:
-        # 1. Generate SQL
-        sql = self.generate_sql(
-            user_id=user_id,
-            question=message,
-        )
-        # 2. Validate SQL
-        validate_sql(
-            sql=sql,
-            user_id=user_id,
-        )
-        # 3. Execute SQL
+
+        sql = self.generate_sql( user_id=user_id, question=message, )
+        try:
+            validate_sql(
+                sql=sql,
+                user_id=user_id,
+            )
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=str(e),
+            )
+
         database = ChatDatabase(db)
         rows = await database.execute(sql)
-        # 4. Summarize result
-        answer = self.summarize(
-            question=message,
-            rows=rows,
-        )
+        answer = self.summarize( question=message, rows=rows, )
         return answer
 
     def generate_sql(

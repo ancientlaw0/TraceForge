@@ -56,12 +56,7 @@ class Trace(Base):
     output_tokens = Column( Integer, nullable=False )
     cost = Column( Numeric(10,6), nullable=False )
     status = Column(
-        Enum(
-            TraceStatus,
-            values_callable=lambda enum_class: [
-                member.value for member in enum_class
-            ],
-        ),
+        Enum( TraceStatus, values_callable=lambda enum_class: [ member.value for member in enum_class ], ),
         nullable=False,
     )
     error_message = Column( Text, nullable=True )

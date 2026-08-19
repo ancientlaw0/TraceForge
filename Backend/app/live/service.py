@@ -1,9 +1,7 @@
 from datetime import datetime, timedelta
 from redis.asyncio import Redis
-
 from app.redis.client import redis_client
 from app.redis.keys import totals_key, provider_key, model_key, providers_set_key, models_set_key
-
 
 class LiveService:
 

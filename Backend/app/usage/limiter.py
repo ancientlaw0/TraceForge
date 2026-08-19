@@ -1,12 +1,9 @@
 from datetime import datetime, timezone
 from decimal import Decimal
-
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.redis.usage import redis_usage
 from app.usage.repository import UsageRepository
-
 
 class UsageLimiter:
 
@@ -29,9 +26,6 @@ class UsageLimiter:
 
         now = datetime.now(timezone.utc)
 
-        # -------------------------
-        # Request admission
-        # -------------------------
 
         if limits.max_requests_per_minute is not None:
 
@@ -47,9 +41,6 @@ class UsageLimiter:
                     limits,
                 )
 
-        # -------------------------
-        # Existing usage accounting
-        # -------------------------
 
         usage = await redis_usage.get_usage(
             user_id=user_id,

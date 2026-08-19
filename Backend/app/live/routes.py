@@ -1,8 +1,6 @@
 from datetime import datetime
 import asyncio
-
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
-
 from app.database import  AsyncSession # <-- your session factory
 from app.dependencies.current_user import get_current_user
 from app.dependencies.current_websocket import get_current_websocket_user
@@ -10,17 +8,9 @@ from app.live.schemas import LiveResponse
 from app.live.service import LiveService
 from app.models import User
 
-router = APIRouter(
-    prefix="/live",
-    tags=["Live"],
-)
-
+router = APIRouter( prefix="/live", tags=["Live"], )
 service = LiveService()
-
-@router.get(
-    "",
-    response_model=LiveResponse,
-)
+@router.get( "", response_model=LiveResponse, )
 async def get_live(
     since: datetime,
     current_user: User = Depends(get_current_user),
@@ -40,16 +30,10 @@ async def live_ws(websocket: WebSocket):
         return
     since = datetime.fromisoformat(since_str)
     async with AsyncSession() as db:
-        current_user = await get_current_websocket_user(
-            token,
-            db,
-        )
+        current_user = await get_current_websocket_user( token, db, )
         try:
             while True:
-                data = await service.get_live(
-                    user_id=current_user.id,
-                    since=since,
-                )
+                data = await service.get_live( user_id=current_user.id, since=since, )
                 await websocket.send_json(data)
                 await asyncio.sleep(10)
         except WebSocketDisconnect:

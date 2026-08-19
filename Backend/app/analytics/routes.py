@@ -9,37 +9,13 @@ from app.analytics.service.models import get_models
 from app.analytics.service.overview import get_overview
 from app.analytics.service.providers import get_providers
 from .schemas import OverviewResponse
-from app.analytics.service.errors import (
-    get_error_analytics as get_error_analytics_service,
-)
+from app.analytics.service.errors import get_error_analytics as get_error_analytics_service
 from .service.timeseries import get_timeseries
 
 router = APIRouter( prefix="/analytics", tags=["Analytics"] )
 
-
 @router.get("/overview", response_model=OverviewResponse)
 async def overview(
-    # start: datetime | None = Query(
-    #     None,
-    #     description="Start datetime (inclusive)"
-    # ),
-    # end: datetime | None = Query(
-    #     None,
-    #     description="End datetime (inclusive)"
-    # ),
-
-    # provider: str | None = Query(
-    #     None,
-    #     description="Filter by provider"
-    # ),
-    # model: str | None = Query(
-    #     None,
-    #     description="Filter by model"
-    # ),
-    # status: TraceStatus | None = Query(
-    #     None,
-    #     description="Filter by request status"
-    # ),
     filters: AnalyticsFilter = Depends(),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

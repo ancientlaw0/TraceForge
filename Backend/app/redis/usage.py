@@ -1,21 +1,9 @@
 from redis.asyncio import Redis
-
 from app.models import Trace
 from app.redis.client import redis_client
-from app.redis.keys import (
-    usage_day_key,
-    usage_hour_key,
-    usage_minute_key,
-)
-
+from app.redis.keys import usage_day_key, usage_hour_key, usage_minute_key
 from app.redis.keys import rate_limit_minute_key
-from app.redis.schemas import (
-    DAY_BUCKET_TTL,
-    HOUR_BUCKET_TTL,
-    MINUTE_BUCKET_TTL,
-)
-
-
+from app.redis.schemas import DAY_BUCKET_TTL, HOUR_BUCKET_TTL, MINUTE_BUCKET_TTL
 class RedisUsageService:
 
     def __init__(self):

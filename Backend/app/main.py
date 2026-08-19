@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import auth, api_keys, trace
+from app.auth.routes import api_keys, auth
+from app.auth.routes import trace
 from app.kafka.producer import start_producer, stop_producer
 from app.redis.client import redis_client
 from app.alerts.routes import router as alert_router

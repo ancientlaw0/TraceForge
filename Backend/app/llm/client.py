@@ -1,7 +1,6 @@
 from openai import OpenAI
 from app.core.config import settings
 
-
 class LLMClient:
     def __init__(self):
         self.client = OpenAI(

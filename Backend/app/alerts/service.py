@@ -1,10 +1,8 @@
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.models import Alert, User
 from app.alerts.schemas import AlertCreate, AlertUpdate
-
 
 async def create_alert(
     db: AsyncSession,

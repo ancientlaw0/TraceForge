@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, status
-
 from app.kafka.producer import publish_event
 from app.core.config import settings
-from app.schemas.traces import TraceCreate
+from app.auth.schemas.traces import TraceCreate
 from app.security.auth_context import AuthContext
 from app.dependencies.current_api_user import get_current_api_user
 from app.usage.limiter import usage_limiter
@@ -39,7 +38,4 @@ async def create_trace(
         event=trace_event,
     )
 
-    return {
-        "trace_id": trace.trace_id,
-        "status": "accepted",
-    }
+    return { "trace_id": trace.trace_id, "status": "accepted", }

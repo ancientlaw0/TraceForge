@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
 from app.models import APIKey, User
-from app.schemas.api_keys import APIKeyCreate, APIKeyResponse , APIKeyInfo
-from app.security.api_keys import ( generate_api_key, hash_api_key )
+from app.auth.schemas.api_keys import APIKeyCreate, APIKeyResponse , APIKeyInfo
+from app.security.api_keys import generate_api_key, hash_api_key 
 from app.dependencies.current_user import get_current_user
 from fastapi import HTTPException
 from typing import List
@@ -33,7 +33,6 @@ async def create_api_key(
     await db.refresh(new_key)
     return APIKeyResponse( api_key=plain_key )
 
-
 @router.get( "/", response_model=List[APIKeyInfo] )
 async def get_api_keys(
     db: AsyncSession = Depends(get_db),
@@ -44,10 +43,8 @@ async def get_api_keys(
         APIKey.user_id == current_user.id
     )
 )
-
     api_keys = result.scalars().all()  # as multiple rows
     return api_keys
-
 
 @router.delete( "/{key_id}", status_code=status.HTTP_204_NO_CONTENT )
 async def revoke_api_key(
@@ -61,9 +58,7 @@ async def revoke_api_key(
             APIKey.user_id == current_user.id
         )
     )
-
     api_key = result.scalar_one_or_none()
-
     if api_key is None: raise HTTPException( status_code=status.HTTP_404_NOT_FOUND, detail="API Key not found." )
     api_key.is_active = False
     await db.commit()

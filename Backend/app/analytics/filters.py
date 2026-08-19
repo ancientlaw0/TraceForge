@@ -1,10 +1,7 @@
 from datetime import datetime, timedelta
-
 from sqlalchemy import Select
-
 from app.models import Trace, User
 from .schemas import AnalyticsFilter, TimeFilter
-
 
 def apply_trace_filters(
     stmt: Select,
@@ -12,34 +9,6 @@ def apply_trace_filters(
     filters: AnalyticsFilter,
 ):
     stmt = stmt.where(Trace.user_id == user.id)
-
-    # if filters.time == TimeFilter.hour:
-    #     stmt = stmt.where(
-    #         Trace.created_at >= datetime.utcnow() - timedelta(hours=1)
-    #     )
-
-    # elif filters.time == TimeFilter.day:
-    #     stmt = stmt.where(
-    #         Trace.created_at >= datetime.utcnow() - timedelta(days=1)
-    #     )
-
-    # elif filters.time == TimeFilter.week:
-    #     stmt = stmt.where(
-    #         Trace.created_at >= datetime.utcnow() - timedelta(days=7)
-    #     )
-
-    # elif filters.time == TimeFilter.month:
-    #     stmt = stmt.where(
-    #         Trace.created_at >= datetime.utcnow() - timedelta(days=30)
-    #     )
-
-    # elif filters.time == TimeFilter.custom:
-    #     if filters.start:
-    #         stmt = stmt.where(Trace.created_at >= filters.start)
-
-    #     if filters.end:
-    #         stmt = stmt.where(Trace.created_at <= filters.end)
-
     TIME_DELTAS = { # used mapping instead of else if chain so that if needed to add something we can easily in dict
         TimeFilter.hour: timedelta(hours=1),
         TimeFilter.day: timedelta(days=1),
