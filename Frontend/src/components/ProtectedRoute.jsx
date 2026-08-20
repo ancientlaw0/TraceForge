@@ -1,54 +1,64 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { getMe } from "../api/auth";
+
+import {
+  getMe,
+  getToken,
+  logout,
+} from "../api/auth";
 
 function ProtectedRoute() {
-    const [checking, setChecking] = useState(true);
-    const [authenticated, setAuthenticated] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
 
-    useEffect(() => {
-        const checkAuthentication = async () => {
-            const token = localStorage.getItem("access_token");
+  useEffect(() => {
+    async function checkAuthentication() {
+      const token = getToken();
 
-            if (!token) {
-                setAuthenticated(false);
-                setChecking(false);
-                return;
-            }
+      if (!token) {
+        setAuthenticated(false);
+        setChecking(false);
+        return;
+      }
 
-            try {
-                await getMe();
+      try {
+        await getMe();
 
-                setAuthenticated(true);
-            } catch (error) {
-                localStorage.removeItem("access_token");
-                setAuthenticated(false);
-            } finally {
-                setChecking(false);
-            }
-        };
+        setAuthenticated(true);
+      } catch (error) {
+        /*
+         * The token exists but the backend rejected it.
+         * Therefore the local session is no longer valid.
+         */
+        logout();
 
-        checkAuthentication();
-    }, []);
-
-    if (checking) {
-        return (
-            <div>
-                <p>Checking authentication...</p>
-            </div>
-        );
+        setAuthenticated(false);
+      } finally {
+        setChecking(false);
+      }
     }
 
-    if (!authenticated) {
-        return (
-            <Navigate
-                to="/auth/login"
-                replace
-            />
-        );
-    }
+    checkAuthentication();
+  }, []);
 
-    return <Outlet />;
+  if (checking) {
+    return (
+      <div>
+        <p>Checking authentication...</p>
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <Navigate
+        to="/auth/login"
+        replace
+      />
+    );
+  }
+
+  return <Outlet />;
 }
 
 export default ProtectedRoute;

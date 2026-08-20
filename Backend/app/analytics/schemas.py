@@ -32,6 +32,7 @@ class TimeFilter(str, Enum):
     day = "day"        # Last 24 hours
     week = "week"      # Last 7 days
     month = "month"    # Last 30 days
+    all = "all"        # All time
     custom = "custom"
 
 class AnalyticsFilter(BaseModel):

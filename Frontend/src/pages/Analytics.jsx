@@ -20,15 +20,21 @@ import {
     CartesianGrid,
     Tooltip,
     Legend,
+    Cell,
 } from "recharts";
 
 
+const CHART = {
+    primary: "#315f50",
+    secondary: "#6f9689",
+    tertiary: "#9bb6ad",
+    error: "#b85c5c",
+    warning: "#b68a4a",
+    grid: "#deddd6",
+};
+
+
 function Analytics() {
-
-    /* ================================
-       FILTERS
-    ================================= */
-
     const [filters, setFilters] = useState({
         time: "week",
         provider: "",
@@ -38,35 +44,28 @@ function Analytics() {
         end: "",
     });
 
-
-    /* ================================
-       DATA
-    ================================= */
-
     const [overview, setOverview] = useState(null);
     const [models, setModels] = useState([]);
     const [providers, setProviders] = useState([]);
     const [timeseries, setTimeseries] = useState([]);
     const [errors, setErrors] = useState([]);
 
-
-    /* ================================
-       PAGE STATE
-    ================================= */
+    // Unfiltered catalogs for the dropdowns.
+    const [providerCatalog, setProviderCatalog] = useState([]);
+    const [modelCatalog, setModelCatalog] = useState([]);
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-
-    const [errorsBySection, setErrorsBySection] =
-        useState({});
+    const [errorsBySection, setErrorsBySection] = useState({});
 
 
-    /* ================================
-       LOAD ANALYTICS
-    ================================= */
+    /*
+     * ---------------------------------------------------------
+     * LOAD ANALYTICS
+     * ---------------------------------------------------------
+     */
 
     const loadAnalytics = async () => {
-
         setRefreshing(true);
 
         const requests = [
@@ -92,274 +91,369 @@ function Analytics() {
             },
         ];
 
-
         const results = await Promise.allSettled(
             requests.map((item) => item.request)
         );
 
-
         const sectionErrors = {};
 
-
         results.forEach((result, index) => {
-
-            const section =
-                requests[index].name;
-
+            const section = requests[index].name;
 
             if (result.status === "fulfilled") {
+                const value = result.value;
 
                 switch (section) {
-
                     case "overview":
-                        setOverview(result.value);
+                        setOverview(value);
                         break;
 
+                    case "models": {
+                        const data = Array.isArray(value)
+                            ? value
+                            : [];
 
-                    case "models":
-                        setModels(
-                            Array.isArray(result.value)
-                                ? result.value
-                                : []
-                        );
+                        setModels(data);
+
+                        /*
+                         * Only populate the catalog from the first
+                         * unfiltered dataset. This prevents selecting
+                         * "anthropic" from making Google models
+                         * disappear from the dropdown forever.
+                         */
+                        if (
+                            !filters.provider &&
+                            !filters.model &&
+                            !providerCatalog.length
+                        ) {
+                            const uniqueProviders = [
+                                ...new Set(
+                                    data
+                                        .map((item) => item.provider)
+                                        .filter(Boolean)
+                                ),
+                            ];
+
+                            const uniqueModels = data
+                                .filter(
+                                    (item) =>
+                                        item.provider &&
+                                        item.model
+                                )
+                                .map((item) => ({
+                                    provider: item.provider,
+                                    model: item.model,
+                                }));
+
+                            setProviderCatalog(uniqueProviders);
+                            setModelCatalog(uniqueModels);
+                        }
+
                         break;
+                    }
 
+                    case "providers": {
+                        const data = Array.isArray(value)
+                            ? value
+                            : [];
 
-                    case "providers":
-                        setProviders(
-                            Array.isArray(result.value)
-                                ? result.value
-                                : []
-                        );
+                        setProviders(data);
+
+                        /*
+                         * Fallback catalog from providers endpoint.
+                         */
+                        if (
+                            !filters.provider &&
+                            !providerCatalog.length
+                        ) {
+                            setProviderCatalog(
+                                data
+                                    .map(
+                                        (item) =>
+                                            item.provider
+                                    )
+                                    .filter(Boolean)
+                            );
+                        }
+
                         break;
-
+                    }
 
                     case "timeseries":
                         setTimeseries(
-                            Array.isArray(result.value)
-                                ? result.value
+                            Array.isArray(value)
+                                ? value
                                 : []
                         );
                         break;
-
 
                     case "errors":
                         setErrors(
-                            Array.isArray(result.value)
-                                ? result.value
+                            Array.isArray(value)
+                                ? value
                                 : []
                         );
                         break;
-
 
                     default:
                         break;
                 }
-
             } else {
-
                 sectionErrors[section] =
                     getErrorMessage(result.reason);
             }
         });
 
-
         setErrorsBySection(sectionErrors);
-
         setLoading(false);
         setRefreshing(false);
     };
 
-
-    /* ================================
-       INITIAL LOAD
-    ================================= */
 
     useEffect(() => {
         loadAnalytics();
     }, []);
 
 
-    /* ================================
-       FILTER HANDLING
-    ================================= */
+    /*
+     * ---------------------------------------------------------
+     * FILTER OPTIONS
+     * ---------------------------------------------------------
+     */
+
+    const availableModels = useMemo(() => {
+        if (!filters.provider) {
+            return modelCatalog;
+        }
+
+        return modelCatalog.filter(
+            (item) =>
+                item.provider === filters.provider
+        );
+    }, [
+        filters.provider,
+        modelCatalog,
+    ]);
+
+
+    /*
+     * ---------------------------------------------------------
+     * FILTER HANDLERS
+     * ---------------------------------------------------------
+     */
 
     const handleFilterChange = (event) => {
+        const { name, value } = event.target;
 
-        const {
-            name,
-            value,
-        } = event.target;
+        setFilters((previous) => {
+            const next = {
+                ...previous,
+                [name]: value,
+            };
 
+            /*
+             * If provider changes, make sure the selected model
+             * actually belongs to that provider.
+             */
+            if (name === "provider") {
+                if (
+                    value &&
+                    previous.model &&
+                    !modelCatalog.some(
+                        (item) =>
+                            item.provider === value &&
+                            item.model === previous.model
+                    )
+                ) {
+                    next.model = "";
+                }
+            }
 
-        setFilters((previous) => ({
-            ...previous,
-            [name]: value,
-        }));
+            /*
+             * Leaving custom mode clears its dates.
+             */
+            if (
+                name === "time" &&
+                value !== "custom"
+            ) {
+                next.start = "";
+                next.end = "";
+            }
+
+            return next;
+        });
     };
 
 
     const handleApplyFilters = () => {
-
-        const validationError =
-            validateFilters(filters);
-
-
-        if (validationError) {
-
-            setErrorsBySection((previous) => ({
-                ...previous,
-                filters: validationError,
-            }));
+        if (
+            filters.time === "custom" &&
+            (!filters.start || !filters.end)
+        ) {
+            setErrorsBySection({
+                filters:
+                    "Please select both start and end dates.",
+            });
 
             return;
         }
 
+        if (
+            filters.time === "custom" &&
+            new Date(filters.start) >=
+                new Date(filters.end)
+        ) {
+            setErrorsBySection({
+                filters:
+                    "Start date must be before end date.",
+            });
 
-        setErrorsBySection((previous) => {
-
-            const next = {
-                ...previous,
-            };
-
-            delete next.filters;
-
-            return next;
-        });
-
+            return;
+        }
 
         loadAnalytics();
     };
 
 
-    /* ================================
-       DERIVED DATA
-    ================================= */
+    /*
+     * ---------------------------------------------------------
+     * DATA
+     * ---------------------------------------------------------
+     */
 
-    const summary =
-        overview?.summary;
-
-
-    const latency =
-        overview?.latency;
-
-
-    const derived =
-        useMemo(
-            () => calculateDerivedMetrics(summary),
-            [summary]
-        );
-
+    const summary = overview?.summary;
+    const latency = overview?.latency;
 
     const formattedTimeseries =
-        useMemo(
-            () =>
-                timeseries.map((item) => ({
-                    ...item,
-                    time: formatTimestamp(
-                        item.timestamp
-                    ),
-                })),
-            [timeseries]
-        );
+        timeseries.map((item) => ({
+            ...item,
+            time: formatTimestamp(item.timestamp),
+        }));
 
 
-    /* ================================
-       INITIAL LOADING
-    ================================= */
+    const latencyData = latency
+        ? [
+              {
+                  name: "Average",
+                  value: Number(
+                      latency.average || 0
+                  ),
+              },
+              {
+                  name: "P50",
+                  value: Number(
+                      latency.p50 || 0
+                  ),
+              },
+              {
+                  name: "P95",
+                  value: Number(
+                      latency.p95 || 0
+                  ),
+              },
+              {
+                  name: "P99",
+                  value: Number(
+                      latency.p99 || 0
+                  ),
+              },
+          ]
+        : [];
+
+
+    /*
+     * ---------------------------------------------------------
+     * LOADING
+     * ---------------------------------------------------------
+     */
 
     if (loading) {
-
         return (
             <div className="analytics-page">
-
                 <div className="analytics-loading">
-
-                    <h1>
-                        Analytics
-                    </h1>
-
-                    <p>
+                    <div className="loading-spinner" />
+                    <span>
                         Loading analytics...
-                    </p>
-
+                    </span>
                 </div>
-
             </div>
         );
     }
 
 
-    /* ================================
-       PAGE
-    ================================= */
+    /*
+     * ---------------------------------------------------------
+     * PAGE
+     * ---------------------------------------------------------
+     */
 
     return (
         <div className="analytics-page">
 
-            {/* =================================
+            {/* =================================================
                 HEADER
-            ================================= */}
+            ================================================= */}
 
             <header className="analytics-header">
 
                 <div>
+                    <div className="analytics-eyebrow">
+                        OBSERVABILITY
+                    </div>
 
-                    <h1>
-                        Analytics
-                    </h1>
+                    <h1>Analytics</h1>
 
                     <p>
                         Monitor requests, latency,
                         cost, tokens and errors.
                     </p>
-
                 </div>
 
-
                 <button
-                    className="secondary-button"
+                    className="refresh-button"
                     onClick={loadAnalytics}
                     disabled={refreshing}
                 >
+                    <span
+                        className={
+                            refreshing
+                                ? "refresh-icon spinning"
+                                : "refresh-icon"
+                        }
+                    >
+                        ↻
+                    </span>
+
                     {refreshing
-                        ? "Refreshing..."
+                        ? "Refreshing"
                         : "Refresh"}
                 </button>
 
             </header>
 
 
-            {/* =================================
+            {/* =================================================
                 FILTERS
-            ================================= */}
+            ================================================= */}
 
-            <section className="analytics-filters">
+            <section className="filters-card">
 
                 <div className="section-heading">
-
                     <div>
-
-                        <h2>
-                            Filters
-                        </h2>
-
+                        <h2>Filters</h2>
                         <p>
-                            Filters apply to all
-                            analytics endpoints.
+                            Narrow analytics to the
+                            traffic you want to inspect.
                         </p>
-
                     </div>
-
                 </div>
 
 
                 <div className="filter-grid">
 
-                    <FilterField
-                        label="Time"
-                    >
+                    {/* TIME */}
 
+                    <FilterField label="Time">
                         <select
                             name="time"
                             value={filters.time}
@@ -367,7 +461,6 @@ function Analytics() {
                                 handleFilterChange
                             }
                         >
-
                             <option value="hour">
                                 Last hour
                             </option>
@@ -385,52 +478,71 @@ function Analytics() {
                             </option>
 
                             <option value="custom">
-                                Custom
+                                Custom range
                             </option>
-
                         </select>
-
                     </FilterField>
 
 
-                    <FilterField
-                        label="Provider"
-                    >
+                    {/* PROVIDER */}
 
-                        <input
-                            type="text"
+                    <FilterField label="Provider">
+                        <select
                             name="provider"
                             value={filters.provider}
-                            placeholder="All providers"
                             onChange={
                                 handleFilterChange
                             }
-                        />
+                        >
+                            <option value="">
+                                All providers
+                            </option>
 
+                            {providerCatalog.map(
+                                (provider) => (
+                                    <option
+                                        key={provider}
+                                        value={provider}
+                                    >
+                                        {provider}
+                                    </option>
+                                )
+                            )}
+                        </select>
                     </FilterField>
 
 
-                    <FilterField
-                        label="Model"
-                    >
+                    {/* MODEL */}
 
-                        <input
-                            type="text"
+                    <FilterField label="Model">
+                        <select
                             name="model"
                             value={filters.model}
-                            placeholder="All models"
                             onChange={
                                 handleFilterChange
                             }
-                        />
+                        >
+                            <option value="">
+                                All models
+                            </option>
 
+                            {availableModels.map(
+                                (item) => (
+                                    <option
+                                        key={`${item.provider}-${item.model}`}
+                                        value={item.model}
+                                    >
+                                        {item.model}
+                                    </option>
+                                )
+                            )}
+                        </select>
                     </FilterField>
 
 
-                    <FilterField
-                        label="Status"
-                    >
+                    {/* STATUS */}
 
+                    <FilterField label="Status">
                         <select
                             name="status"
                             value={filters.status}
@@ -438,7 +550,6 @@ function Analytics() {
                                 handleFilterChange
                             }
                         >
-
                             <option value="">
                                 All statuses
                             </option>
@@ -454,24 +565,16 @@ function Analytics() {
                             <option value="timeout">
                                 Timeout
                             </option>
-
                         </select>
-
                     </FilterField>
 
                 </div>
 
 
-                {/* CUSTOM DATE */}
-
                 {filters.time === "custom" && (
-
                     <div className="custom-date-grid">
 
-                        <FilterField
-                            label="Start"
-                        >
-
+                        <FilterField label="Start">
                             <input
                                 type="datetime-local"
                                 name="start"
@@ -480,14 +583,9 @@ function Analytics() {
                                     handleFilterChange
                                 }
                             />
-
                         </FilterField>
 
-
-                        <FilterField
-                            label="End"
-                        >
-
+                        <FilterField label="End">
                             <input
                                 type="datetime-local"
                                 name="end"
@@ -496,525 +594,511 @@ function Analytics() {
                                     handleFilterChange
                                 }
                             />
-
                         </FilterField>
 
                     </div>
-
                 )}
 
 
                 {errorsBySection.filters && (
-
-                    <div className="inline-error">
-
+                    <div className="filter-error">
                         {errorsBySection.filters}
-
                     </div>
-
                 )}
 
 
-                <button
-                    className="primary-button"
-                    onClick={
-                        handleApplyFilters
-                    }
-                    disabled={refreshing}
-                >
-                    {refreshing
-                        ? "Applying..."
-                        : "Apply Filters"}
-                </button>
+                <div className="filter-actions">
+
+                    <span className="filter-summary">
+                        {filters.provider ||
+                            "All providers"}
+
+                        {" · "}
+
+                        {filters.model ||
+                            "All models"}
+
+                        {" · "}
+
+                        {filters.status ||
+                            "All statuses"}
+                    </span>
+
+                    <button
+                        className="apply-button"
+                        onClick={
+                            handleApplyFilters
+                        }
+                        disabled={refreshing}
+                    >
+                        Apply Filters
+                    </button>
+
+                </div>
 
             </section>
 
 
-            {/* =================================
-                KPI CARDS
-            ================================= */}
+            {/* =================================================
+                KPI GRID
+            ================================================= */}
 
             <section className="metric-grid">
 
                 <MetricCard
-                    title="Total Requests"
+                    label="Total Requests"
                     value={formatNumber(
                         summary?.total_requests
                     )}
-                    error={
-                        errorsBySection.overview
-                    }
+                    icon="↗"
                 />
 
-
                 <MetricCard
-                    title="Success Rate"
+                    label="Success Rate"
                     value={
                         summary
                             ? `${formatNumber(
-                                summary.success_rate
-                            )}%`
+                                  summary.success_rate
+                              )}%`
                             : "—"
                     }
-                    error={
-                        errorsBySection.overview
-                    }
+                    tone="success"
                 />
 
-
                 <MetricCard
-                    title="Error Rate"
+                    label="Error Rate"
                     value={
                         summary
                             ? `${formatNumber(
-                                summary.error_rate
-                            )}%`
+                                  summary.error_rate
+                              )}%`
                             : "—"
                     }
-                    error={
-                        errorsBySection.overview
-                    }
+                    tone="error"
                 />
 
-
                 <MetricCard
-                    title="Timeout Rate"
+                    label="Timeout Rate"
                     value={
                         summary
                             ? `${formatNumber(
-                                summary.timeout_rate
-                            )}%`
+                                  summary.timeout_rate
+                              )}%`
                             : "—"
                     }
-                    error={
-                        errorsBySection.overview
-                    }
+                    tone="warning"
                 />
 
-
                 <MetricCard
-                    title="Total Cost"
+                    label="Total Cost"
                     value={
                         summary
                             ? formatCost(
-                                summary.total_cost
-                            )
+                                  summary.total_cost
+                              )
                             : "—"
                     }
-                    error={
-                        errorsBySection.overview
-                    }
+                    tone="cost"
                 />
 
-
                 <MetricCard
-                    title="Average Latency"
+                    label="Average Latency"
                     value={
                         latency
                             ? formatLatency(
-                                latency.average
-                            )
+                                  latency.average
+                              )
                             : "—"
-                    }
-                    error={
-                        errorsBySection.overview
-                    }
-                />
-
-
-                <MetricCard
-                    title="P50 Latency"
-                    value={
-                        latency
-                            ? formatLatency(
-                                latency.p50
-                            )
-                            : "—"
-                    }
-                    error={
-                        errorsBySection.overview
-                    }
-                />
-
-
-                <MetricCard
-                    title="P95 Latency"
-                    value={
-                        latency
-                            ? formatLatency(
-                                latency.p95
-                            )
-                            : "—"
-                    }
-                    error={
-                        errorsBySection.overview
-                    }
-                />
-
-
-                <MetricCard
-                    title="P99 Latency"
-                    value={
-                        latency
-                            ? formatLatency(
-                                latency.p99
-                            )
-                            : "—"
-                    }
-                    error={
-                        errorsBySection.overview
                     }
                 />
 
             </section>
 
 
-            {/* =================================
-                EFFICIENCY
-            ================================= */}
-
-            <section className="analytics-section">
-
-                <div className="section-heading">
-
-                    <div>
-
-                        <h2>
-                            Efficiency
-                        </h2>
-
-                        <p>
-                            Calculated from the
-                            returned analytics.
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <div className="metric-grid">
-
-                    <MetricCard
-                        title="Cost / Request"
-                        value={
-                            derived.costPerRequest !== null
-                                ? formatCost(
-                                    derived.costPerRequest
-                                )
-                                : "—"
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Tokens / Request"
-                        value={
-                            derived.tokensPerRequest !== null
-                                ? formatNumber(
-                                    derived.tokensPerRequest
-                                )
-                                : "—"
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Input Tokens / Request"
-                        value={
-                            derived.inputTokensPerRequest !== null
-                                ? formatNumber(
-                                    derived.inputTokensPerRequest
-                                )
-                                : "—"
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Output Tokens / Request"
-                        value={
-                            derived.outputTokensPerRequest !== null
-                                ? formatNumber(
-                                    derived.outputTokensPerRequest
-                                )
-                                : "—"
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Total Input Tokens"
-                        value={formatNumber(
-                            summary?.total_input_tokens
-                        )}
-                    />
-
-
-                    <MetricCard
-                        title="Total Output Tokens"
-                        value={formatNumber(
-                            summary?.total_output_tokens
-                        )}
-                    />
-
-                </div>
-
-            </section>
-
-
-            {/* =================================
+            {/* =================================================
                 REQUEST ACTIVITY
-            ================================= */}
+            ================================================= */}
 
             <ChartCard
                 title="Request Activity"
+                subtitle="Traffic volume and request outcomes"
                 error={
                     errorsBySection.timeseries
                 }
                 empty={!timeseries.length}
             >
-
                 <ResponsiveContainer
                     width="100%"
-                    height={350}
+                    height={320}
                 >
-
                     <LineChart
                         data={formattedTimeseries}
+                        margin={{
+                            top: 10,
+                            right: 10,
+                            left: -10,
+                            bottom: 0,
+                        }}
                     >
 
                         <CartesianGrid
-                            strokeDasharray="3 3"
+                            stroke={
+                                CHART.grid
+                            }
+                            strokeDasharray="3 5"
+                            vertical={false}
                         />
 
                         <XAxis
                             dataKey="time"
+                            tickLine={false}
+                            axisLine={false}
                         />
 
-                        <YAxis />
+                        <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            width={42}
+                        />
 
-                        <Tooltip />
+                        <Tooltip
+                            contentStyle={
+                                tooltipStyle
+                            }
+                        />
 
-                        <Legend />
-
+                        <Legend
+                            verticalAlign="top"
+                            align="right"
+                            height={36}
+                        />
 
                         <Line
                             type="monotone"
                             dataKey="requests"
                             name="Requests"
+                            stroke={
+                                CHART.primary
+                            }
+                            strokeWidth={2.5}
                             dot={false}
+                            activeDot={{
+                                r: 5,
+                            }}
                         />
-
 
                         <Line
                             type="monotone"
-                            dataKey="successful_requests"
+                            dataKey={
+                                "successful_requests"
+                            }
                             name="Successful"
+                            stroke={
+                                CHART.secondary
+                            }
+                            strokeWidth={2}
                             dot={false}
                         />
 
-
                         <Line
                             type="monotone"
-                            dataKey="error_requests"
+                            dataKey={
+                                "error_requests"
+                            }
                             name="Errors"
+                            stroke={
+                                CHART.error
+                            }
+                            strokeWidth={2}
                             dot={false}
                         />
 
-
                         <Line
                             type="monotone"
-                            dataKey="timeout_requests"
+                            dataKey={
+                                "timeout_requests"
+                            }
                             name="Timeouts"
+                            stroke={
+                                CHART.warning
+                            }
+                            strokeWidth={2}
                             dot={false}
                         />
 
                     </LineChart>
-
                 </ResponsiveContainer>
-
             </ChartCard>
 
 
-            {/* =================================
+            {/* =================================================
                 COST + TOKENS
-            ================================= */}
+            ================================================= */}
 
             <div className="two-column">
 
                 <ChartCard
                     title="Cost Over Time"
+                    subtitle="Total request cost"
                     error={
                         errorsBySection.timeseries
                     }
                     empty={!timeseries.length}
                 >
-
                     <ResponsiveContainer
                         width="100%"
-                        height={300}
+                        height={250}
                     >
-
                         <LineChart
                             data={formattedTimeseries}
+                            margin={{
+                                top: 10,
+                                right: 10,
+                                left: -10,
+                                bottom: 0,
+                            }}
                         >
 
                             <CartesianGrid
-                                strokeDasharray="3 3"
+                                stroke={
+                                    CHART.grid
+                                }
+                                strokeDasharray="3 5"
+                                vertical={false}
                             />
 
                             <XAxis
                                 dataKey="time"
+                                tickLine={false}
+                                axisLine={false}
                             />
 
-                            <YAxis />
+                            <YAxis
+                                tickLine={false}
+                                axisLine={false}
+                                width={48}
+                            />
 
-                            <Tooltip />
-
+                            <Tooltip
+                                contentStyle={
+                                    tooltipStyle
+                                }
+                                formatter={(
+                                    value
+                                ) =>
+                                    formatCost(
+                                        value
+                                    )
+                                }
+                            />
 
                             <Line
                                 type="monotone"
                                 dataKey="total_cost"
                                 name="Cost"
+                                stroke={
+                                    CHART.primary
+                                }
+                                strokeWidth={2.5}
                                 dot={false}
+                                fill={
+                                    CHART.primary
+                                }
                             />
 
                         </LineChart>
-
                     </ResponsiveContainer>
-
                 </ChartCard>
 
 
                 <ChartCard
                     title="Token Usage"
+                    subtitle="Input vs output tokens"
                     error={
                         errorsBySection.timeseries
                     }
                     empty={!timeseries.length}
                 >
-
                     <ResponsiveContainer
                         width="100%"
-                        height={300}
+                        height={250}
                     >
-
                         <LineChart
                             data={formattedTimeseries}
+                            margin={{
+                                top: 10,
+                                right: 10,
+                                left: -10,
+                                bottom: 0,
+                            }}
                         >
 
                             <CartesianGrid
-                                strokeDasharray="3 3"
+                                stroke={
+                                    CHART.grid
+                                }
+                                strokeDasharray="3 5"
+                                vertical={false}
                             />
 
                             <XAxis
                                 dataKey="time"
+                                tickLine={false}
+                                axisLine={false}
                             />
 
-                            <YAxis />
+                            <YAxis
+                                tickLine={false}
+                                axisLine={false}
+                                width={52}
+                            />
 
-                            <Tooltip />
+                            <Tooltip
+                                contentStyle={
+                                    tooltipStyle
+                                }
+                            />
 
-                            <Legend />
-
+                            <Legend
+                                verticalAlign="top"
+                                align="right"
+                                height={32}
+                            />
 
                             <Line
                                 type="monotone"
-                                dataKey="total_input_tokens"
-                                name="Input Tokens"
+                                dataKey={
+                                    "total_input_tokens"
+                                }
+                                name="Input"
+                                stroke={
+                                    CHART.primary
+                                }
+                                strokeWidth={2}
                                 dot={false}
                             />
 
-
                             <Line
                                 type="monotone"
-                                dataKey="total_output_tokens"
-                                name="Output Tokens"
+                                dataKey={
+                                    "total_output_tokens"
+                                }
+                                name="Output"
+                                stroke={
+                                    CHART.secondary
+                                }
+                                strokeWidth={2}
                                 dot={false}
                             />
 
                         </LineChart>
-
                     </ResponsiveContainer>
-
                 </ChartCard>
 
             </div>
 
 
-            {/* =================================
+            {/* =================================================
                 LATENCY
-            ================================= */}
+            ================================================= */}
 
             <ChartCard
                 title="Latency Distribution"
+                subtitle="Average and percentile latency"
                 error={
                     errorsBySection.overview
                 }
                 empty={!latency}
             >
-
-                {latency && (
-
-                    <ResponsiveContainer
-                        width="100%"
-                        height={320}
+                <ResponsiveContainer
+                    width="100%"
+                    height={270}
+                >
+                    <BarChart
+                        data={latencyData}
+                        margin={{
+                            top: 15,
+                            right: 10,
+                            left: -10,
+                            bottom: 0,
+                        }}
                     >
 
-                        <BarChart
-                            data={[
-                                {
-                                    name: "Average",
-                                    value: latency.average,
-                                },
-                                {
-                                    name: "P50",
-                                    value: latency.p50,
-                                },
-                                {
-                                    name: "P95",
-                                    value: latency.p95,
-                                },
-                                {
-                                    name: "P99",
-                                    value: latency.p99,
-                                },
+                        <CartesianGrid
+                            stroke={
+                                CHART.grid
+                            }
+                            strokeDasharray="3 5"
+                            vertical={false}
+                        />
+
+                        <XAxis
+                            dataKey="name"
+                            tickLine={false}
+                            axisLine={false}
+                        />
+
+                        <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            width={50}
+                        />
+
+                        <Tooltip
+                            contentStyle={
+                                tooltipStyle
+                            }
+                            formatter={(
+                                value
+                            ) =>
+                                formatLatency(
+                                    value
+                                )
+                            }
+                        />
+
+                        <Bar
+                            dataKey="value"
+                            name="Latency"
+                            radius={[
+                                6,
+                                6,
+                                0,
+                                0,
                             ]}
+                            barSize={48}
                         >
+                            {latencyData.map(
+                                (_, index) => (
+                                    <Cell
+                                        key={index}
+                                        fill={
+                                            [
+                                                CHART.tertiary,
+                                                CHART.secondary,
+                                                CHART.primary,
+                                                CHART.primary,
+                                            ][
+                                                index
+                                            ]
+                                        }
+                                    />
+                                )
+                            )}
+                        </Bar>
 
-                            <CartesianGrid
-                                strokeDasharray="3 3"
-                            />
-
-                            <XAxis
-                                dataKey="name"
-                            />
-
-                            <YAxis />
-
-                            <Tooltip />
-
-                            <Bar
-                                dataKey="value"
-                                name="Latency"
-                            />
-
-                        </BarChart>
-
-                    </ResponsiveContainer>
-
-                )}
-
+                    </BarChart>
+                </ResponsiveContainer>
             </ChartCard>
 
 
-            {/* =================================
+            {/* =================================================
                 MODEL PERFORMANCE
-            ================================= */}
+            ================================================= */}
 
             <ChartCard
                 title="Model Performance"
+                subtitle="Performance across individual models"
                 error={
                     errorsBySection.models
                 }
@@ -1023,158 +1107,93 @@ function Analytics() {
 
                 <div className="table-wrapper">
 
-                    <table>
+                    <table className="analytics-table">
 
                         <thead>
-
                             <tr>
-
-                                <th>
-                                    Provider
-                                </th>
-
-                                <th>
-                                    Model
-                                </th>
-
-                                <th>
-                                    Requests
-                                </th>
-
-                                <th>
-                                    Success
-                                </th>
-
-                                <th>
-                                    Errors
-                                </th>
-
-                                <th>
-                                    Timeouts
-                                </th>
-
-                                <th>
-                                    Avg Latency
-                                </th>
-
-                                <th>
-                                    P95
-                                </th>
-
-                                <th>
-                                    Cost
-                                </th>
-
-                                <th>
-                                    Cost / Request
-                                </th>
-
-                                <th>
-                                    Tokens / Request
-                                </th>
-
-                                <th>
-                                    Error Rate
-                                </th>
-
-                                <th>
-                                    Timeout Rate
-                                </th>
-
+                                <th>Provider</th>
+                                <th>Model</th>
+                                <th>Requests</th>
+                                <th>Success</th>
+                                <th>Avg Latency</th>
+                                <th>P95</th>
+                                <th>Cost</th>
+                                <th>Error Rate</th>
                             </tr>
-
                         </thead>
-
 
                         <tbody>
 
-                            {models.map((model) => (
+                            {models.map(
+                                (model) => (
+                                    <tr
+                                        key={`${model.provider}-${model.model}`}
+                                    >
 
-                                <tr
-                                    key={`${model.provider}-${model.model}`}
-                                >
+                                        <td>
+                                            <span className="provider-badge">
+                                                {
+                                                    model.provider
+                                                }
+                                            </span>
+                                        </td>
 
-                                    <td>
-                                        {model.provider}
-                                    </td>
+                                        <td>
+                                            <span className="model-name">
+                                                {
+                                                    model.model
+                                                }
+                                            </span>
+                                        </td>
 
-                                    <td>
-                                        {model.model}
-                                    </td>
+                                        <td>
+                                            {formatNumber(
+                                                model.requests
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatNumber(
-                                            model.requests
-                                        )}
-                                    </td>
+                                        <td>
+                                            {formatNumber(
+                                                model.successful_requests
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatNumber(
-                                            model.successful_requests
-                                        )}
-                                    </td>
+                                        <td>
+                                            {formatLatency(
+                                                model.average_latency
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatNumber(
-                                            model.error_requests
-                                        )}
-                                    </td>
+                                        <td>
+                                            {formatLatency(
+                                                model.p95_latency
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatNumber(
-                                            model.timeout_requests
-                                        )}
-                                    </td>
+                                        <td>
+                                            {formatCost(
+                                                model.total_cost
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatLatency(
-                                            model.average_latency
-                                        )}
-                                    </td>
+                                        <td>
+                                            <span
+                                                className={
+                                                    getRateClass(
+                                                        model.error_rate
+                                                    )
+                                                }
+                                            >
+                                                {formatNumber(
+                                                    model.error_rate
+                                                )}
+                                                %
+                                            </span>
+                                        </td>
 
-                                    <td>
-                                        {formatLatency(
-                                            model.p95_latency
-                                        )}
-                                    </td>
-
-                                    <td>
-                                        {formatCost(
-                                            model.total_cost
-                                        )}
-                                    </td>
-
-                                    <td>
-                                        {formatCost(
-                                            getCostPerRequest(
-                                                model
-                                            )
-                                        )}
-                                    </td>
-
-                                    <td>
-                                        {formatNumber(
-                                            getTokensPerRequest(
-                                                model
-                                            )
-                                        )}
-                                    </td>
-
-                                    <td>
-                                        {formatNumber(
-                                            model.error_rate
-                                        )}%
-                                    </td>
-
-                                    <td>
-                                        {formatNumber(
-                                            model.timeout_rate
-                                        )}%
-                                    </td>
-
-                                </tr>
-
-                            ))}
+                                    </tr>
+                                )
+                            )}
 
                         </tbody>
 
@@ -1185,111 +1204,173 @@ function Analytics() {
             </ChartCard>
 
 
-            {/* =================================
+            {/* =================================================
                 PROVIDER CHARTS
-            ================================= */}
+            ================================================= */}
 
             <div className="two-column">
 
                 <ChartCard
                     title="Provider Cost"
+                    subtitle="Total spend by provider"
                     error={
                         errorsBySection.providers
                     }
                     empty={!providers.length}
                 >
-
                     <ResponsiveContainer
                         width="100%"
-                        height={320}
+                        height={270}
                     >
-
                         <BarChart
                             data={providers}
                             layout="vertical"
                             margin={{
-                                left: 30,
+                                top: 5,
                                 right: 20,
+                                left: 10,
+                                bottom: 5,
                             }}
                         >
 
                             <CartesianGrid
-                                strokeDasharray="3 3"
+                                stroke={
+                                    CHART.grid
+                                }
+                                strokeDasharray="3 5"
+                                horizontal={false}
                             />
 
                             <XAxis
                                 type="number"
+                                tickLine={false}
+                                axisLine={false}
                             />
 
                             <YAxis
                                 type="category"
                                 dataKey="provider"
-                                width={100}
+                                width={70}
+                                tickLine={false}
+                                axisLine={false}
                             />
 
-                            <Tooltip />
+                            <Tooltip
+                                contentStyle={
+                                    tooltipStyle
+                                }
+                                formatter={(
+                                    value
+                                ) =>
+                                    formatCost(
+                                        value
+                                    )
+                                }
+                            />
 
                             <Bar
                                 dataKey="total_cost"
                                 name="Cost"
+                                fill={
+                                    CHART.primary
+                                }
+                                radius={[
+                                    0,
+                                    6,
+                                    6,
+                                    0,
+                                ]}
+                                barSize={28}
                             />
 
                         </BarChart>
-
                     </ResponsiveContainer>
-
                 </ChartCard>
 
 
                 <ChartCard
                     title="Provider Latency"
+                    subtitle="Average latency by provider"
                     error={
                         errorsBySection.providers
                     }
                     empty={!providers.length}
                 >
-
                     <ResponsiveContainer
                         width="100%"
-                        height={320}
+                        height={270}
                     >
-
                         <BarChart
                             data={providers}
+                            margin={{
+                                top: 5,
+                                right: 10,
+                                left: -10,
+                                bottom: 5,
+                            }}
                         >
 
                             <CartesianGrid
-                                strokeDasharray="3 3"
+                                stroke={
+                                    CHART.grid
+                                }
+                                strokeDasharray="3 5"
+                                vertical={false}
                             />
 
                             <XAxis
                                 dataKey="provider"
+                                tickLine={false}
+                                axisLine={false}
                             />
 
-                            <YAxis />
+                            <YAxis
+                                tickLine={false}
+                                axisLine={false}
+                            />
 
-                            <Tooltip />
+                            <Tooltip
+                                contentStyle={
+                                    tooltipStyle
+                                }
+                                formatter={(
+                                    value
+                                ) =>
+                                    formatLatency(
+                                        value
+                                    )
+                                }
+                            />
 
                             <Bar
                                 dataKey="average_latency"
                                 name="Average Latency"
+                                fill={
+                                    CHART.secondary
+                                }
+                                radius={[
+                                    6,
+                                    6,
+                                    0,
+                                    0,
+                                ]}
+                                barSize={42}
                             />
 
                         </BarChart>
-
                     </ResponsiveContainer>
-
                 </ChartCard>
 
             </div>
 
 
-            {/* =================================
+            {/* =================================================
                 PROVIDER PERFORMANCE
-            ================================= */}
+            ================================================= */}
 
             <ChartCard
                 title="Provider Performance"
+                subtitle="Aggregated provider metrics"
                 error={
                     errorsBySection.providers
                 }
@@ -1298,151 +1379,100 @@ function Analytics() {
 
                 <div className="table-wrapper">
 
-                    <table>
+                    <table className="analytics-table">
 
                         <thead>
-
                             <tr>
-
-                                <th>
-                                    Provider
-                                </th>
-
-                                <th>
-                                    Requests
-                                </th>
-
-                                <th>
-                                    Success
-                                </th>
-
-                                <th>
-                                    Errors
-                                </th>
-
-                                <th>
-                                    Timeouts
-                                </th>
-
-                                <th>
-                                    Avg Latency
-                                </th>
-
-                                <th>
-                                    P95
-                                </th>
-
-                                <th>
-                                    Cost
-                                </th>
-
-                                <th>
-                                    Cost / Request
-                                </th>
-
-                                <th>
-                                    Tokens / Request
-                                </th>
-
-                                <th>
-                                    Error Rate
-                                </th>
-
-                                <th>
-                                    Timeout Rate
-                                </th>
-
+                                <th>Provider</th>
+                                <th>Requests</th>
+                                <th>Success</th>
+                                <th>Errors</th>
+                                <th>Timeouts</th>
+                                <th>Avg Latency</th>
+                                <th>P95</th>
+                                <th>Cost</th>
+                                <th>Error Rate</th>
                             </tr>
-
                         </thead>
-
 
                         <tbody>
 
-                            {providers.map((provider) => (
+                            {providers.map(
+                                (provider) => (
+                                    <tr
+                                        key={
+                                            provider.provider
+                                        }
+                                    >
 
-                                <tr
-                                    key={provider.provider}
-                                >
+                                        <td>
+                                            <span className="provider-badge">
+                                                {
+                                                    provider.provider
+                                                }
+                                            </span>
+                                        </td>
 
-                                    <td>
-                                        {provider.provider}
-                                    </td>
+                                        <td>
+                                            {formatNumber(
+                                                provider.requests
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatNumber(
-                                            provider.requests
-                                        )}
-                                    </td>
+                                        <td>
+                                            {formatNumber(
+                                                provider.successful_requests
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatNumber(
-                                            provider.successful_requests
-                                        )}
-                                    </td>
+                                        <td className="error-number">
+                                            {formatNumber(
+                                                provider.error_requests
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatNumber(
-                                            provider.error_requests
-                                        )}
-                                    </td>
+                                        <td className="timeout-number">
+                                            {formatNumber(
+                                                provider.timeout_requests
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatNumber(
-                                            provider.timeout_requests
-                                        )}
-                                    </td>
+                                        <td>
+                                            {formatLatency(
+                                                provider.average_latency
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatLatency(
-                                            provider.average_latency
-                                        )}
-                                    </td>
+                                        <td>
+                                            {formatLatency(
+                                                provider.p95_latency
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatLatency(
-                                            provider.p95_latency
-                                        )}
-                                    </td>
+                                        <td>
+                                            {formatCost(
+                                                provider.total_cost
+                                            )}
+                                        </td>
 
-                                    <td>
-                                        {formatCost(
-                                            provider.total_cost
-                                        )}
-                                    </td>
+                                        <td>
+                                            <span
+                                                className={
+                                                    getRateClass(
+                                                        provider.error_rate
+                                                    )
+                                                }
+                                            >
+                                                {formatNumber(
+                                                    provider.error_rate
+                                                )}
+                                                %
+                                            </span>
+                                        </td>
 
-                                    <td>
-                                        {formatCost(
-                                            getCostPerRequest(
-                                                provider
-                                            )
-                                        )}
-                                    </td>
-
-                                    <td>
-                                        {formatNumber(
-                                            getTokensPerRequest(
-                                                provider
-                                            )
-                                        )}
-                                    </td>
-
-                                    <td>
-                                        {formatNumber(
-                                            provider.error_rate
-                                        )}%
-                                    </td>
-
-                                    <td>
-                                        {formatNumber(
-                                            provider.timeout_rate
-                                        )}%
-
-                                    </td>
-
-                                </tr>
-
-                            ))}
+                                    </tr>
+                                )
+                            )}
 
                         </tbody>
 
@@ -1453,12 +1483,13 @@ function Analytics() {
             </ChartCard>
 
 
-            {/* =================================
+            {/* =================================================
                 TOP ERRORS
-            ================================= */}
+            ================================================= */}
 
             <ChartCard
                 title="Top Errors"
+                subtitle="Most frequent error messages"
                 error={
                     errorsBySection.errors
                 }
@@ -1467,41 +1498,79 @@ function Analytics() {
 
                 <ResponsiveContainer
                     width="100%"
-                    height={350}
+                    height={
+                        Math.max(
+                            230,
+                            Math.min(
+                                errors.slice(
+                                    0,
+                                    5
+                                ).length * 52 +
+                                    70,
+                                340
+                            )
+                        )
+                    }
                 >
-
                     <BarChart
-                        data={errors}
+                        data={errors.slice(
+                            0,
+                            5
+                        )}
                         layout="vertical"
                         margin={{
-                            left: 50,
-                            right: 20,
+                            top: 5,
+                            right: 25,
+                            left: 10,
+                            bottom: 5,
                         }}
                     >
 
                         <CartesianGrid
-                            strokeDasharray="3 3"
+                            stroke={
+                                CHART.grid
+                            }
+                            strokeDasharray="3 5"
+                            horizontal={false}
                         />
 
                         <XAxis
                             type="number"
+                            tickLine={false}
+                            axisLine={false}
                         />
 
                         <YAxis
                             type="category"
                             dataKey="error_message"
                             width={220}
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={truncateError}
                         />
 
-                        <Tooltip />
+                        <Tooltip
+                            contentStyle={
+                                tooltipStyle
+                            }
+                        />
 
                         <Bar
                             dataKey="count"
                             name="Occurrences"
+                            fill={
+                                CHART.error
+                            }
+                            radius={[
+                                0,
+                                6,
+                                6,
+                                0,
+                            ]}
+                            barSize={25}
                         />
 
                     </BarChart>
-
                 </ResponsiveContainer>
 
             </ChartCard>
@@ -1511,116 +1580,97 @@ function Analytics() {
 }
 
 
-/* =================================
-   FILTER FIELD
-================================= */
+/* =============================================================
+   COMPONENTS
+============================================================= */
+
 
 function FilterField({
     label,
     children,
 }) {
-
     return (
         <div className="filter-field">
-
-            <label>
-                {label}
-            </label>
-
+            <label>{label}</label>
             {children}
-
         </div>
     );
 }
 
-
-/* =================================
-   METRIC CARD
-================================= */
 
 function MetricCard({
-    title,
+    label,
     value,
-    error,
+    tone = "",
+    icon,
 }) {
-
     return (
-        <div className="metric-card">
+        <div
+            className={`metric-card ${
+                tone ? `metric-${tone}` : ""
+            }`}
+        >
 
-            <span className="metric-title">
-                {title}
-            </span>
+            <div className="metric-card-top">
 
+                <span className="metric-label">
+                    {label}
+                </span>
 
-            {error ? (
+                {icon && (
+                    <span className="metric-icon">
+                        {icon}
+                    </span>
+                )}
 
-                <p className="metric-error">
-                    {error}
-                </p>
+            </div>
 
-            ) : (
-
-                <strong className="metric-value">
-                    {value}
-                </strong>
-
-            )}
+            <strong className="metric-value">
+                {value}
+            </strong>
 
         </div>
     );
 }
 
-
-/* =================================
-   CHART CARD
-================================= */
 
 function ChartCard({
     title,
+    subtitle,
     children,
     error,
     empty,
 }) {
-
     return (
         <section className="chart-card">
 
-            <div className="chart-heading">
+            <div className="chart-card-header">
 
-                <h2>
-                    {title}
-                </h2>
+                <div>
+                    <h2>{title}</h2>
+
+                    {subtitle && (
+                        <p>{subtitle}</p>
+                    )}
+                </div>
 
             </div>
 
-
             {error ? (
-
                 <div className="section-error">
-
                     <strong>
-                        Unable to load this section.
+                        Unable to load this section
                     </strong>
 
-                    <p>
-                        {error}
-                    </p>
-
+                    <span>{error}</span>
                 </div>
-
             ) : empty ? (
-
                 <div className="empty-state">
-
                     No data available for the
                     selected filters.
-
                 </div>
-
             ) : (
-
                 children
-
             )}
 
         </section>
@@ -1628,182 +1678,29 @@ function ChartCard({
 }
 
 
-/* =================================
-   FILTER VALIDATION
-================================= */
-
-function validateFilters(filters) {
-
-    if (filters.time !== "custom") {
-        return null;
-    }
+/* =============================================================
+   HELPERS
+============================================================= */
 
 
-    if (!filters.start || !filters.end) {
+const tooltipStyle = {
+    background: "#ffffff",
+    border: "1px solid #deddd6",
+    borderRadius: "8px",
+    boxShadow:
+        "0 8px 24px rgba(15, 23, 42, 0.08)",
+    fontSize: "12px",
+};
 
-        return (
-            "Please select both start and end dates."
-        );
-    }
-
-
-    const start =
-        new Date(filters.start);
-
-    const end =
-        new Date(filters.end);
-
-
-    if (
-        Number.isNaN(start.getTime()) ||
-        Number.isNaN(end.getTime())
-    ) {
-
-        return (
-            "Please enter valid dates."
-        );
-    }
-
-
-    if (start >= end) {
-
-        return (
-            "Start date must be before end date."
-        );
-    }
-
-
-    return null;
-}
-
-
-/* =================================
-   DERIVED METRICS
-================================= */
-
-function calculateDerivedMetrics(summary) {
-
-    if (!summary) {
-
-        return {
-            costPerRequest: null,
-            tokensPerRequest: null,
-            inputTokensPerRequest: null,
-            outputTokensPerRequest: null,
-        };
-    }
-
-
-    const requests =
-        Number(summary.total_requests) || 0;
-
-
-    const cost =
-        Number(summary.total_cost) || 0;
-
-
-    const inputTokens =
-        Number(summary.total_input_tokens) || 0;
-
-
-    const outputTokens =
-        Number(summary.total_output_tokens) || 0;
-
-
-    return {
-
-        costPerRequest:
-            requests > 0
-                ? cost / requests
-                : null,
-
-
-        tokensPerRequest:
-            requests > 0
-                ? (
-                    inputTokens +
-                    outputTokens
-                ) / requests
-                : null,
-
-
-        inputTokensPerRequest:
-            requests > 0
-                ? inputTokens / requests
-                : null,
-
-
-        outputTokensPerRequest:
-            requests > 0
-                ? outputTokens / requests
-                : null,
-    };
-}
-
-
-/* =================================
-   MODEL / PROVIDER CALCULATIONS
-================================= */
-
-function getCostPerRequest(item) {
-
-    const requests =
-        Number(item?.requests) || 0;
-
-
-    const cost =
-        Number(item?.total_cost) || 0;
-
-
-    if (requests <= 0) {
-        return null;
-    }
-
-
-    return cost / requests;
-}
-
-
-function getTokensPerRequest(item) {
-
-    const requests =
-        Number(item?.requests) || 0;
-
-
-    const input =
-        Number(item?.total_input_tokens) || 0;
-
-
-    const output =
-        Number(item?.total_output_tokens) || 0;
-
-
-    if (requests <= 0) {
-        return null;
-    }
-
-
-    return (
-        (input + output) / requests
-    );
-}
-
-
-/* =================================
-   NUMBER FORMATTING
-================================= */
 
 function formatNumber(value) {
-
     if (
         value === null ||
         value === undefined ||
         Number.isNaN(Number(value))
     ) {
-
         return "—";
     }
-
 
     return Number(value).toLocaleString(
         undefined,
@@ -1814,83 +1711,55 @@ function formatNumber(value) {
 }
 
 
-/* =================================
-   COST FORMATTING
-================================= */
-
 function formatCost(value) {
-
     if (
         value === null ||
         value === undefined ||
         Number.isNaN(Number(value))
     ) {
-
         return "—";
     }
-
 
     return `$${Number(value).toFixed(4)}`;
 }
 
 
-/* =================================
-   LATENCY FORMATTING
-================================= */
-
 function formatLatency(value) {
-
     if (
         value === null ||
         value === undefined ||
         Number.isNaN(Number(value))
     ) {
-
         return "—";
     }
 
-
-    const latency =
-        Number(value);
-
+    const latency = Number(value);
 
     if (latency >= 1000) {
-
         return `${(
             latency / 1000
         ).toFixed(2)} s`;
     }
 
-
     return `${latency.toFixed(0)} ms`;
 }
 
 
-/* =================================
-   TIMESTAMP FORMATTING
-================================= */
-
 function formatTimestamp(timestamp) {
-
     if (!timestamp) {
         return "";
     }
 
+    const date = new Date(timestamp);
 
-    const date =
-        new Date(timestamp);
-
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-
+    if (Number.isNaN(date.getTime())) {
         return "";
     }
 
-
+    /*
+     * For hourly data include the time.
+     * For daily/monthly data show the date.
+     */
     return date.toLocaleDateString(
         undefined,
         {
@@ -1901,77 +1770,58 @@ function formatTimestamp(timestamp) {
 }
 
 
-/* =================================
-   ERROR HANDLING
-================================= */
+function truncateError(value) {
+    if (!value) {
+        return "";
+    }
+
+    if (value.length <= 32) {
+        return value;
+    }
+
+    return `${value.slice(0, 32)}…`;
+}
+
+
+function getRateClass(rate) {
+    const value = Number(rate);
+
+    if (value >= 40) {
+        return "rate-high";
+    }
+
+    if (value >= 20) {
+        return "rate-medium";
+    }
+
+    return "rate-low";
+}
+
 
 function getErrorMessage(error) {
-
     if (!error) {
         return "Unknown error.";
     }
 
-
     if (error.response) {
-
         const status =
             error.response.status;
 
-
         if (status === 401) {
-
-            return (
-                "Authentication expired. " +
-                "Please log in again."
-            );
+            return "Authentication expired.";
         }
-
 
         if (status === 403) {
-
-            return (
-                "You are not authorized " +
-                "to view this analytics data."
-            );
+            return "You are not allowed to view this analytics data.";
         }
-
 
         if (status === 422) {
-
-            const detail =
-                error.response.data?.detail;
-
-
-            if (Array.isArray(detail)) {
-
-                return (
-                    "Invalid analytics filters."
-                );
-            }
-
-
-            return (
-                detail ||
-                "Invalid analytics filters."
-            );
+            return "Invalid analytics filters.";
         }
-
-
-        if (status === 404) {
-
-            return (
-                "Analytics endpoint was not found."
-            );
-        }
-
 
         if (status >= 500) {
-
-            return (
-                "Server error. Please try again later."
-            );
+            return "Server error. Please try again later.";
         }
-
 
         return (
             error.response.data?.detail ||
@@ -1979,18 +1829,11 @@ function getErrorMessage(error) {
         );
     }
 
-
     if (error.request) {
-
-        return (
-            "Unable to connect to the server."
-        );
+        return "Unable to connect to the server.";
     }
 
-
-    return (
-        "Something went wrong. Please try again."
-    );
+    return "Something went wrong.";
 }
 
 

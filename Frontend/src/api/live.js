@@ -1,33 +1,22 @@
-import api from "./client";
+import { getToken } from "./auth";
 
+const WS_URL =
+  import.meta.env.VITE_WS_URL ||
+  "ws://localhost:8000/live/ws";
 
-// Initial snapshot from the database
-export async function getLive(since) {
-    const response = await api.get("/live", {
-        params: {
-            since,
-        },
-    });
+export function createLiveSocket(since) {
+  const token = getToken();
 
-    return response.data;
-}
+  if (!token) {
+    throw new Error("Not authenticated.");
+  }
 
+  const params = new URLSearchParams({
+    token,
+    since: since.toISOString(),
+  });
 
-// WebSocket connection
-export function createLiveWebSocket(token, since) {
-
-    const protocol =
-        window.location.protocol === "https:"
-            ? "wss:"
-            : "ws:";
-
-    const host =
-        window.location.host;
-
-    const url =
-        `ws://localhost:8000/live/ws` +
-        `?token=${encodeURIComponent(token)}` +
-        `&since=${encodeURIComponent(since)}`;
-
-    return new WebSocket(url);
+  return new WebSocket(
+    `${WS_URL}?${params.toString()}`
+  );
 }

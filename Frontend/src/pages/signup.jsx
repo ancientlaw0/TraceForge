@@ -1,126 +1,132 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+
+import AuthLayout from "../components/AuthLayout";
 import { signup } from "../api/auth";
 
-function Signup() {
-    const navigate = useNavigate();
+export default function Signup() {
+  const navigate = useNavigate();
 
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
 
-        setError("");
-        setLoading(true);
+    setError("");
 
-        try {
-            await signup(email, password);
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
 
-            navigate("/auth/login", {
-                state: {
-                    message: "Account created successfully. Please log in.",
-                },
-            });
+    if (password !== confirmPassword) {
+      setError("Passwords don't match.");
+      return;
+    }
 
-        } catch (error) {
+    setLoading(true);
 
-            if (error.response) {
-                const status = error.response.status;
+    try {
+      await signup(email, password);
 
-                if (status === 409) {
-                    setError("Email is already registered.");
-                }
-                else if (status === 422) {
-                    setError(
-                        "Please enter a valid email and a password between 8 and 128 characters."
-                    );
-                }
-                else if (status >= 500) {
-                    setError(
-                        "Server error. Please try again later."
-                    );
-                }
-                else {
-                    setError("Signup failed. Please try again.");
-                }
+      navigate("/auth/login", {
+        state: {
+          signedUp: true,
+        },
+      });
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-            } else if (error.request) {
-                setError(
-                    "Unable to connect to the server. Please try again."
-                );
-
-            } else {
-                setError(
-                    "Something went wrong. Please try again."
-                );
-            }
-
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div>
-            <h1>TraceForge</h1>
-
-            <h2>Create Account</h2>
-
-            {error && (
-                <p>
-                    {error}
-                </p>
-            )}
-
-            <form onSubmit={handleSubmit}>
-
-                <div>
-                    <label>Email</label>
-
-                    <input
-                        type="email"
-                        name="email"
-                        value={email}
-                        onChange={(event) =>
-                            setEmail(event.target.value)
-                        }
-                        disabled={loading}
-                    />
-                </div>
-
-                <div>
-                    <label>Password</label>
-
-                    <input
-                        type="password"
-                        name="password"
-                        value={password}
-                        onChange={(event) =>
-                            setPassword(event.target.value)
-                        }
-                        disabled={loading}
-                    />
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                >
-                    {loading ? "Creating account..." : "Sign Up"}
-                </button>
-
-            </form>
-
-            <p>
-                Already have an account?
-                <a href="/auth/login"> Login</a>
-            </p>
+  return (
+    <AuthLayout
+      eyebrow="Get started"
+      title="Create your account"
+      subtitle="Set up TraceForge and start understanding your model calls."
+    >
+      {error && (
+        <div className="auth-banner auth-banner-error">
+          {error}
         </div>
-    );
-}
+      )}
 
-export default Signup;
+      <form
+        className="auth-form"
+        onSubmit={handleSubmit}
+      >
+
+        <label className="auth-field">
+          <span>Email</span>
+
+          <input
+            type="email"
+            value={email}
+            onChange={(event) =>
+              setEmail(event.target.value)
+            }
+            placeholder="you@company.com"
+            autoComplete="email"
+            required
+          />
+        </label>
+
+        <label className="auth-field">
+          <span>Password</span>
+
+          <input
+            type="password"
+            value={password}
+            onChange={(event) =>
+              setPassword(event.target.value)
+            }
+            placeholder="At least 8 characters"
+            autoComplete="new-password"
+            required
+          />
+        </label>
+
+        <label className="auth-field">
+          <span>Confirm password</span>
+
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(event) =>
+              setConfirmPassword(event.target.value)
+            }
+            placeholder="Re-enter your password"
+            autoComplete="new-password"
+            required
+          />
+        </label>
+
+        <button
+          className="auth-submit"
+          type="submit"
+          disabled={loading}
+        >
+          {loading
+            ? "Creating account…"
+            : "Create account"}
+        </button>
+
+      </form>
+
+      <p className="auth-switch">
+        Already have an account?{" "}
+        <Link to="/auth/login">
+          Log in
+        </Link>
+      </p>
+
+    </AuthLayout>
+  );
+}

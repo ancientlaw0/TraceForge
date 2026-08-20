@@ -1,1224 +1,830 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
-import {
-    getLive,
-    createLiveWebSocket,
-} from "../api/live";
+import { createLiveSocket } from "../api/live";
+import "../css/Live.css";
 
-import {
-    ResponsiveContainer,
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-} from "recharts";
-
-import "../css/live.css";
-
-
-function Live() {
-
-    const [liveData, setLiveData] = useState(null);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState("");
-
-    const [connectionStatus, setConnectionStatus] =
-        useState("connecting");
-
-    const [lastUpdated, setLastUpdated] =
-        useState(null);
-
-    const socketRef =
-        useRef(null);
-
-
-    /* =================================
-       INITIAL DATA + WEBSOCKET
-    ================================= */
-
-    useEffect(() => {
-
-        let mounted = true;
-
-        const token =
-            localStorage.getItem(
-                "access_token"
-            );
-
-
-        if (!token) {
-
-            setError(
-                "You must be logged in to view live analytics."
-            );
-
-            setLoading(false);
-
-            setConnectionStatus("unauthorized");
-
-            return;
-        }
-
-
-        const since =
-            new Date(
-                Date.now() -
-                60 * 60 * 1000
-            ).toISOString();
-
-
-        async function initialise() {
-
-            try {
-
-                /*
-                 * First get the current snapshot.
-                 */
-
-                const initialData =
-                    await getLive(since);
-
-
-                if (!mounted) {
-                    return;
-                }
-
-
-                setLiveData(
-                    normalizeLiveData(initialData)
-                );
-
-                setLastUpdated(
-                    new Date()
-                );
-
-                setLoading(false);
-
-
-                /*
-                 * Then connect WebSocket.
-                 */
-
-                connectWebSocket(
-                    token,
-                    since
-                );
-
-            } catch (err) {
-
-                if (!mounted) {
-                    return;
-                }
-
-
-                setLoading(false);
-
-                setError(
-                    getErrorMessage(err)
-                );
-
-                setConnectionStatus(
-                    "error"
-                );
-            }
-        }
-
-
-        initialise();
-
-
-        return () => {
-
-            mounted = false;
-
-            if (socketRef.current) {
-
-                socketRef.current.close();
-
-                socketRef.current = null;
-            }
-        };
-
-    }, []);
-
-
-    /* =================================
-       WEBSOCKET
-    ================================= */
-
-    function connectWebSocket(
-        token,
-        since
-    ) {
-
-        try {
-
-            setConnectionStatus(
-                "connecting"
-            );
-
-
-            const socket =
-                createLiveWebSocket(
-                    token,
-                    since
-                );
-
-
-            socketRef.current =
-                socket;
-
-
-            socket.onopen = () => {
-
-                setConnectionStatus(
-                    "connected"
-                );
-
-                setError("");
-            };
-
-
-            socket.onmessage = (event) => {
-
-                try {
-
-                    const data =
-                        JSON.parse(
-                            event.data
-                        );
-
-
-                    setLiveData(
-                        normalizeLiveData(data)
-                    );
-
-                    setLastUpdated(
-                        new Date()
-                    );
-
-                    setError("");
-
-                } catch {
-
-                    setError(
-                        "Received invalid data from the live server."
-                    );
-                }
-            };
-
-
-            socket.onerror = () => {
-
-                setConnectionStatus(
-                    "error"
-                );
-
-                setError(
-                    "Unable to connect to the live server."
-                );
-            };
-
-
-            socket.onclose = (event) => {
-
-                socketRef.current =
-                    null;
-
-
-                if (
-                    event.code === 1008
-                ) {
-
-                    setConnectionStatus(
-                        "unauthorized"
-                    );
-
-                    setError(
-                        "Live connection was rejected. Please log in again."
-                    );
-
-                    return;
-                }
-
-
-                setConnectionStatus(
-                    "disconnected"
-                );
-            };
-
-        } catch {
-
-            setConnectionStatus(
-                "error"
-            );
-
-            setError(
-                "Unable to create live connection."
-            );
-        }
-    }
-
-
-    /* =================================
-       LOADING
-    ================================= */
-
-    if (loading) {
-
-        return (
-            <div className="live-page">
-
-                <div className="live-loading">
-
-                    <h1>
-                        Live
-                    </h1>
-
-                    <p>
-                        Loading live analytics...
-                    </p>
-
-                </div>
-
-            </div>
-        );
-    }
-
-
-    /* =================================
-       MAIN PAGE
-    ================================= */
-
-    return (
-        <div className="live-page">
-
-            {/* ============================
-                HEADER
-            ============================ */}
-
-            <header className="live-header">
-
-                <div>
-
-                    <h1>
-                        Live
-                    </h1>
-
-                    <p>
-                        Real-time activity from your
-                        TraceForge traces.
-                    </p>
-
-                </div>
-
-
-                <ConnectionIndicator
-                    status={
-                        connectionStatus
-                    }
-                />
-
-            </header>
-
-
-            {/* ============================
-                ERROR
-            ============================ */}
-
-            {error && (
-
-                <div className="live-error">
-
-                    <strong>
-                        Live connection issue
-                    </strong>
-
-                    <p>
-                        {error}
-                    </p>
-
-                </div>
-
-            )}
-
-
-            {/* ============================
-                LAST UPDATED
-            ============================ */}
-
-            <div className="live-meta">
-
-                <span>
-
-                    Last update:{" "}
-
-                    {lastUpdated
-                        ? lastUpdated.toLocaleTimeString()
-                        : "—"}
-
-                </span>
-
-
-                <span>
-
-                    {connectionStatus ===
-                    "connected"
-                        ? "Receiving live updates"
-                        : "Live updates unavailable"}
-
-                </span>
-
-            </div>
-
-
-            {/* ============================
-                SUMMARY
-            ============================ */}
-
-            <section className="live-section">
-
-                <div className="live-metric-grid">
-
-                    <MetricCard
-                        title="Requests"
-                        value={
-                            formatNumber(
-                                liveData?.summary?.requests
-                            )
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Success"
-                        value={
-                            formatNumber(
-                                liveData?.summary?.success
-                            )
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Errors"
-                        value={
-                            formatNumber(
-                                liveData?.summary?.errors ??
-                                liveData?.summary?.failed
-                            )
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Timeouts"
-                        value={
-                            formatNumber(
-                                liveData?.summary?.timeouts
-                            )
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Average Latency"
-                        value={
-                            formatLatency(
-                                liveData?.summary?.avg_latency
-                            )
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Cost"
-                        value={
-                            formatCost(
-                                liveData?.summary?.cost
-                            )
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Input Tokens"
-                        value={
-                            formatNumber(
-                                liveData?.summary?.input_tokens
-                            )
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Output Tokens"
-                        value={
-                            formatNumber(
-                                liveData?.summary?.output_tokens
-                            )
-                        }
-                    />
-
-
-                    <MetricCard
-                        title="Total Tokens"
-                        value={
-                            formatNumber(
-                                liveData?.summary?.total_tokens ??
-                                (
-                                    Number(
-                                        liveData?.summary?.input_tokens
-                                    ) || 0
-                                ) +
-                                (
-                                    Number(
-                                        liveData?.summary?.output_tokens
-                                    ) || 0
-                                )
-                            )
-                        }
-                    />
-
-                </div>
-
-            </section>
-
-
-            {/* ============================
-                REQUEST ACTIVITY
-            ============================ */}
-
-            <section className="live-card">
-
-                <div className="live-card-header">
-
-                    <div>
-
-                        <h2>
-                            Request Activity
-                        </h2>
-
-                        <p>
-                            Recent requests over time.
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                {liveData?.graph?.length ? (
-
-                    <ResponsiveContainer
-                        width="100%"
-                        height={350}
-                    >
-
-                        <LineChart
-                            data={
-                                normalizeGraph(
-                                    liveData.graph
-                                )
-                            }
-                        >
-
-                            <CartesianGrid
-                                strokeDasharray="3 3"
-                            />
-
-                            <XAxis
-                                dataKey="minute"
-                            />
-
-                            <YAxis />
-
-                            <Tooltip />
-
-                            <Legend />
-
-
-                            <Line
-                                type="monotone"
-                                dataKey="requests"
-                                name="Requests"
-                                dot={false}
-                            />
-
-
-                            <Line
-                                type="monotone"
-                                dataKey="success"
-                                name="Success"
-                                dot={false}
-                            />
-
-
-                            <Line
-                                type="monotone"
-                                dataKey="errors"
-                                name="Errors"
-                                dot={false}
-                            />
-
-
-                            <Line
-                                type="monotone"
-                                dataKey="timeouts"
-                                name="Timeouts"
-                                dot={false}
-                            />
-
-                        </LineChart>
-
-                    </ResponsiveContainer>
-
-                ) : (
-
-                    <EmptyState
-                        message={
-                            "No recent request activity."
-                        }
-                    />
-
-                )}
-
-            </section>
-
-
-            {/* ============================
-                PROVIDERS + MODELS
-            ============================ */}
-
-            <div className="live-two-column">
-
-
-                {/* PROVIDERS */}
-
-                <section className="live-card">
-
-                    <div className="live-card-header">
-
-                        <div>
-
-                            <h2>
-                                Providers
-                            </h2>
-
-                            <p>
-                                Current provider activity.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    {liveData?.providers?.length ? (
-
-                        <div className="live-table-wrapper">
-
-                            <table>
-
-                                <thead>
-
-                                    <tr>
-
-                                        <th>
-                                            Provider
-                                        </th>
-
-                                        <th>
-                                            Requests
-                                        </th>
-
-                                        <th>
-                                            Cost
-                                        </th>
-
-                                    </tr>
-
-                                </thead>
-
-
-                                <tbody>
-
-                                    {liveData.providers.map(
-                                        (provider) => (
-
-                                            <tr
-                                                key={
-                                                    provider.provider
-                                                }
-                                            >
-
-                                                <td>
-                                                    {
-                                                        provider.provider
-                                                    }
-                                                </td>
-
-                                                <td>
-                                                    {
-                                                        formatNumber(
-                                                            provider.requests
-                                                        )
-                                                    }
-                                                </td>
-
-                                                <td>
-                                                    {
-                                                        formatCost(
-                                                            provider.cost
-                                                        )
-                                                    }
-                                                </td>
-
-                                            </tr>
-
-                                        )
-                                    )}
-
-                                </tbody>
-
-                            </table>
-
-                        </div>
-
-                    ) : (
-
-                        <EmptyState
-                            message={
-                                "No provider activity."
-                            }
-                        />
-
-                    )}
-
-                </section>
-
-
-                {/* MODELS */}
-
-                <section className="live-card">
-
-                    <div className="live-card-header">
-
-                        <div>
-
-                            <h2>
-                                Models
-                            </h2>
-
-                            <p>
-                                Current model activity.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    {liveData?.models?.length ? (
-
-                        <div className="live-table-wrapper">
-
-                            <table>
-
-                                <thead>
-
-                                    <tr>
-
-                                        <th>
-                                            Model
-                                        </th>
-
-                                        <th>
-                                            Requests
-                                        </th>
-
-                                        <th>
-                                            Cost
-                                        </th>
-
-                                    </tr>
-
-                                </thead>
-
-
-                                <tbody>
-
-                                    {liveData.models.map(
-                                        (model) => (
-
-                                            <tr
-                                                key={
-                                                    model.model
-                                                }
-                                            >
-
-                                                <td>
-                                                    {
-                                                        model.model
-                                                    }
-                                                </td>
-
-                                                <td>
-                                                    {
-                                                        formatNumber(
-                                                            model.requests
-                                                        )
-                                                    }
-                                                </td>
-
-                                                <td>
-                                                    {
-                                                        formatCost(
-                                                            model.cost
-                                                        )
-                                                    }
-                                                </td>
-
-                                            </tr>
-
-                                        )
-                                    )}
-
-                                </tbody>
-
-                            </table>
-
-                        </div>
-
-                    ) : (
-
-                        <EmptyState
-                            message={
-                                "No model activity."
-                            }
-                        />
-
-                    )}
-
-                </section>
-
-            </div>
-
-        </div>
-    );
-}
-
-
-/* =================================
-   CONNECTION INDICATOR
-================================= */
-
-function ConnectionIndicator({
-    status,
-}) {
-
-    let text = "Connecting...";
-    let className = "connecting";
-
-
-    if (status === "connected") {
-
-        text = "Live";
-        className = "connected";
-
-    } else if (
-        status === "disconnected"
-    ) {
-
-        text = "Disconnected";
-        className = "disconnected";
-
-    } else if (
-        status === "unauthorized"
-    ) {
-
-        text = "Unauthorized";
-        className = "error";
-
-    } else if (
-        status === "error"
-    ) {
-
-        text = "Connection error";
-        className = "error";
-    }
-
-
-    return (
-        <div
-            className={
-                `connection-indicator ${className}`
-            }
-        >
-
-            <span className="connection-dot" />
-
-            <span>
-                {text}
-            </span>
-
-        </div>
-    );
-}
-
-
-/* =================================
-   METRIC CARD
-================================= */
-
-function MetricCard({
-    title,
-    value,
-}) {
-
-    return (
-        <div className="live-metric-card">
-
-            <span>
-                {title}
-            </span>
-
-            <strong>
-                {value}
-            </strong>
-
-        </div>
-    );
-}
-
-
-/* =================================
-   EMPTY STATE
-================================= */
-
-function EmptyState({
-    message,
-}) {
-
-    return (
-        <div className="live-empty">
-
-            {message}
-
-        </div>
-    );
-}
-
-
-/* =================================
-   NORMALIZE RESPONSE
-================================= */
-
-function normalizeLiveData(data) {
-
-    if (!data || typeof data !== "object") {
-
-        return {
-            summary: {
-                requests: 0,
-                success: 0,
-                errors: 0,
-                timeouts: 0,
-                avg_latency: 0,
-                cost: 0,
-                input_tokens: 0,
-                output_tokens: 0,
-                total_tokens: 0,
-            },
-
-            graph: [],
-
-            providers: [],
-
-            models: [],
-        };
-    }
-
-
-    const summary =
-        data.summary || {};
-
-
-    return {
-
-        ...data,
-
-        summary: {
-
-            requests:
-                Number(
-                    summary.requests
-                ) || 0,
-
-            success:
-                Number(
-                    summary.success
-                ) || 0,
-
-            errors:
-                Number(
-                    summary.errors ??
-                    summary.failed
-                ) || 0,
-
-            timeouts:
-                Number(
-                    summary.timeouts
-                ) || 0,
-
-            avg_latency:
-                Number(
-                    summary.avg_latency
-                ) || 0,
-
-            cost:
-                Number(
-                    summary.cost
-                ) || 0,
-
-            input_tokens:
-                Number(
-                    summary.input_tokens
-                ) || 0,
-
-            output_tokens:
-                Number(
-                    summary.output_tokens
-                ) || 0,
-
-            total_tokens:
-                Number(
-                    summary.total_tokens
-                ) ||
-                (
-                    Number(
-                        summary.input_tokens
-                    ) || 0
-                ) +
-                (
-                    Number(
-                        summary.output_tokens
-                    ) || 0
-                ),
-        },
-
-
-        graph:
-            Array.isArray(data.graph)
-                ? data.graph
-                : [],
-
-
-        providers:
-            Array.isArray(data.providers)
-                ? data.providers
-                : [],
-
-
-        models:
-            Array.isArray(data.models)
-                ? data.models
-                : [],
-    };
-}
-
-
-/* =================================
-   GRAPH NORMALIZATION
-================================= */
-
-function normalizeGraph(graph) {
-
-    return graph.map((point) => ({
-
-        ...point,
-
-        requests:
-            Number(
-                point.requests
-            ) || 0,
-
-        success:
-            Number(
-                point.success
-            ) || 0,
-
-        errors:
-            Number(
-                point.errors ??
-                point.failed
-            ) || 0,
-
-        timeouts:
-            Number(
-                point.timeouts
-            ) || 0,
-    }));
-}
-
-
-/* =================================
-   NUMBER
-================================= */
 
 function formatNumber(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        Number.isNaN(Number(value))
-    ) {
-
-        return "—";
-    }
-
-
-    return Number(value).toLocaleString(
-        undefined,
-        {
-            maximumFractionDigits: 2,
-        }
-    );
+  return new Intl.NumberFormat("en-US").format(
+    Number(value || 0)
+  );
 }
 
-
-/* =================================
-   COST
-================================= */
 
 function formatCost(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        Number.isNaN(Number(value))
-    ) {
-
-        return "—";
-    }
-
-
-    return `$${Number(value).toFixed(4)}`;
+  return `$${Number(value || 0).toFixed(4)}`;
 }
 
-
-/* =================================
-   LATENCY
-================================= */
 
 function formatLatency(value) {
+  const latency = Number(value || 0);
 
-    if (
-        value === null ||
-        value === undefined ||
-        Number.isNaN(Number(value))
-    ) {
-
-        return "—";
-    }
-
-
-    const latency =
-        Number(value);
-
-
-    if (latency >= 1000) {
-
-        return `${(
-            latency / 1000
-        ).toFixed(2)} s`;
-    }
-
-
+  if (latency < 1000) {
     return `${latency.toFixed(0)} ms`;
+  }
+
+  return `${(latency / 1000).toFixed(2)} s`;
 }
 
 
-/* =================================
-   ERROR HANDLING
-================================= */
+function formatPercent(value, total) {
+  if (!total) {
+    return "0.0%";
+  }
 
-function getErrorMessage(error) {
+  return `${(
+    (Number(value || 0) / total) *
+    100
+  ).toFixed(1)}%`;
+}
 
-    if (!error) {
+const LIVE_RANGES = {
+  "30m": 30,
+  "1h": 60,
+  "2h": 120,
+};
+/* =========================================================
+   REQUEST GRAPH
+========================================================= */
 
-        return (
-            "Something went wrong."
-        );
-    }
+function RequestGraph({ data }) {
 
+  const width = 900;
+  const height = 280;
 
-    if (error.response) {
+  const padding = {
+    top: 24,
+    right: 24,
+    bottom: 42,
+    left: 48,
+  };
 
-        const status =
-            error.response.status;
+  const innerWidth =
+    width -
+    padding.left -
+    padding.right;
 
-
-        if (status === 401) {
-
-            return (
-                "Authentication expired. " +
-                "Please log in again."
-            );
-        }
-
-
-        if (status === 403) {
-
-            return (
-                "You are not authorized " +
-                "to view live analytics."
-            );
-        }
-
-
-        if (status === 422) {
-
-            return (
-                "Invalid live analytics request."
-            );
-        }
+  const innerHeight =
+    height -
+    padding.top -
+    padding.bottom;
 
 
-        if (status >= 500) {
-
-            return (
-                "Server error. Please try again later."
-            );
-        }
-
-
-        return (
-            error.response.data?.detail ||
-            "Unable to load live analytics."
-        );
-    }
-
-
-    if (error.request) {
-
-        return (
-            "Unable to connect to the TraceForge server."
-        );
-    }
-
-
+  if (!data || data.length === 0) {
     return (
-        "Something went wrong. Please try again."
+      <div className="live-chart-empty">
+        No request activity yet.
+      </div>
     );
+  }
+
+
+  const values = data.map(
+    (point) => Number(point.requests || 0)
+  );
+
+  const maxValue = Math.max(
+    ...values,
+    1
+  );
+
+
+  const points = data.map(
+    (point, index) => {
+
+const x =
+  data.length === 1
+    ? padding.left + innerWidth / 2
+    : padding.left +
+      (
+        index /
+        (data.length - 1)
+      ) *
+      innerWidth;
+
+      const y =
+        padding.top +
+        innerHeight -
+        (
+          Number(point.requests || 0) /
+          maxValue
+        ) *
+        innerHeight;
+
+      return {
+        x,
+        y,
+        value: Number(point.requests || 0),
+        minute: point.minute,
+      };
+    }
+  );
+
+
+  const path = points
+    .map(
+      (point, index) =>
+        `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`
+    )
+    .join(" ");
+
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1];
+
+
+  return (
+    <div className="live-chart-wrapper">
+
+      <svg
+        className="live-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+      >
+
+        {/* Grid */}
+
+        {gridLines.map((ratio) => {
+
+          const y =
+            padding.top +
+            innerHeight -
+            ratio * innerHeight;
+
+          const value =
+            Math.round(
+              maxValue * ratio
+            );
+
+          return (
+            <g key={ratio}>
+
+              <line
+                x1={padding.left}
+                y1={y}
+                x2={width - padding.right}
+                y2={y}
+                className="chart-grid-line"
+              />
+
+              <text
+                x={padding.left - 10}
+                y={y + 4}
+                textAnchor="end"
+                className="chart-axis-label"
+              >
+                {value}
+              </text>
+
+            </g>
+          );
+        })}
+
+
+        {/* Graph line */}
+
+        <path
+          d={path}
+          className="chart-line"
+          fill="none"
+        />
+
+
+        {/* Points */}
+
+        {points.map((point, index) => {
+
+          /*
+           * Don't render every point when there
+           * are many minutes. It keeps the graph
+           * visually clean.
+           */
+          const shouldShow =
+            data.length <= 20 ||
+            index % 5 === 0 ||
+            index === data.length - 1;
+
+          if (!shouldShow) {
+            return null;
+          }
+
+          return (
+            <circle
+              key={`${point.minute}-${index}`}
+              cx={point.x}
+              cy={point.y}
+              r="3.5"
+              className="chart-point"
+            />
+          );
+        })}
+
+
+        {/* X-axis labels */}
+
+        {points.map((point, index) => {
+
+          const shouldShow =
+            index === 0 ||
+            index === points.length - 1 ||
+            index === Math.floor(points.length / 2);
+
+          if (!shouldShow) {
+            return null;
+          }
+
+          return (
+            <text
+              key={`label-${index}`}
+              x={point.x}
+              y={height - 14}
+              textAnchor="middle"
+              className="chart-axis-label"
+            >
+              {point.minute}
+            </text>
+          );
+        })}
+
+      </svg>
+
+    </div>
+  );
 }
 
 
-export default Live;
+/* =========================================================
+   STAT CARD
+========================================================= */
+
+function StatCard({
+  label,
+  value,
+  secondary,
+}) {
+  return (
+    <div className="live-stat surface">
+
+      <p className="live-stat-label">
+        {label}
+      </p>
+
+      <strong className="live-stat-value">
+        {value}
+      </strong>
+
+      {secondary && (
+        <p className="live-stat-secondary">
+          {secondary}
+        </p>
+      )}
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   PROVIDER / MODEL TABLE
+========================================================= */
+
+function BreakdownTable({
+  title,
+  data,
+  type,
+}) {
+
+  return (
+    <section className="live-panel surface">
+
+      <div className="live-panel-header">
+
+        <div>
+          <h2>{title}</h2>
+
+          <p>
+            Activity during the live window.
+          </p>
+        </div>
+
+      </div>
+
+
+      {data.length === 0 ? (
+
+        <div className="live-empty">
+          No activity recorded yet.
+        </div>
+
+      ) : (
+
+        <div className="live-table-wrapper">
+
+          <table className="live-table">
+
+            <thead>
+              <tr>
+
+                <th>
+                  {type === "provider"
+                    ? "Provider"
+                    : "Model"}
+                </th>
+
+                <th>
+                  Requests
+                </th>
+
+                <th>
+                  Cost
+                </th>
+
+                <th>
+                  Share
+                </th>
+
+              </tr>
+            </thead>
+
+
+            <tbody>
+
+              {data.map((item) => {
+
+                const totalRequests =
+                  data.reduce(
+                    (
+                      total,
+                      current
+                    ) =>
+                      total +
+                      Number(
+                        current.requests || 0
+                      ),
+                    0
+                  );
+
+                return (
+                  <tr
+                    key={
+                      type === "provider"
+                        ? item.provider
+                        : item.model
+                    }
+                  >
+
+                    <td className="live-name">
+                      {
+                        type === "provider"
+                          ? item.provider
+                          : item.model
+                      }
+                    </td>
+
+                    <td>
+                      {formatNumber(
+                        item.requests
+                      )}
+                    </td>
+
+                    <td>
+                      {formatCost(
+                        item.cost
+                      )}
+                    </td>
+
+                    <td>
+                      {formatPercent(
+                        item.requests,
+                        totalRequests
+                      )}
+                    </td>
+
+                  </tr>
+                );
+              })}
+
+            </tbody>
+
+          </table>
+
+        </div>
+      )}
+
+    </section>
+  );
+}
+
+
+/* =========================================================
+   MAIN PAGE
+========================================================= */
+
+export default function Live() {
+
+  const [data, setData] = useState(null);
+
+  const [connectionState, setConnectionState] =
+    useState("connecting");
+
+  const [error, setError] =
+    useState("");
+
+  const [timeRange, setTimeRange] =
+    useState("30m");
+
+
+  useEffect(() => {
+
+    const minutes =
+      LIVE_RANGES[timeRange];
+
+    const since = new Date(
+      Date.now() -
+      minutes * 60 * 1000
+    );
+
+
+    let socket;
+
+    setConnectionState("connecting");
+    setError("");
+
+
+    try {
+
+      socket = createLiveSocket(
+        since
+      );
+
+    } catch (error) {
+
+      setConnectionState("error");
+      setError(
+        error.message ||
+        "Unable to connect to the live service."
+      );
+
+      return;
+    }
+
+
+    socket.onopen = () => {
+
+      setConnectionState("connected");
+      setError("");
+
+    };
+
+
+    socket.onmessage = (event) => {
+
+      try {
+
+        const incoming =
+          JSON.parse(event.data);
+
+        setData(incoming);
+
+      } catch {
+
+        setError(
+          "Received invalid live data."
+        );
+
+      }
+
+    };
+
+
+    socket.onerror = () => {
+
+      setConnectionState("error");
+
+      setError(
+        "Unable to connect to the live service."
+      );
+
+    };
+
+
+    socket.onclose = () => {
+
+      setConnectionState(
+        (current) =>
+          current === "error"
+            ? "error"
+            : "disconnected"
+      );
+
+    };
+
+
+    return () => {
+
+      socket.close();
+
+    };
+
+  }, [timeRange]);
+
+  const summary = data?.summary || {
+    requests: 0,
+    success: 0,
+    failed: 0,
+    avg_latency: 0,
+    cost: 0,
+    input_tokens: 0,
+    output_tokens: 0,
+    total_tokens: 0,
+  };
+
+
+  const graph =
+    data?.graph || [];
+
+
+  const providers =
+    useMemo(
+      () =>
+        [...(data?.providers || [])]
+          .sort(
+            (a, b) =>
+              Number(b.requests || 0) -
+              Number(a.requests || 0)
+          ),
+      [data?.providers]
+    );
+
+
+  const models =
+    useMemo(
+      () =>
+        [...(data?.models || [])]
+          .sort(
+            (a, b) =>
+              Number(b.requests || 0) -
+              Number(a.requests || 0)
+          ),
+      [data?.models]
+    );
+
+
+  const lastUpdated =
+    data
+      ? new Date()
+      : null;
+
+
+  return (
+    <div className="live-page">
+
+      {/* =================================================
+          HEADER
+      ================================================= */}
+
+      <header className="live-header">
+
+        <div>
+
+          <p className="page-eyebrow">
+            Observability
+          </p>
+
+          <h1 className="page-title">
+            Live
+          </h1>
+
+          <p className="page-subtitle">
+            Real-time activity from your
+            applications.
+          </p>
+
+        </div>
+
+
+        <div className="live-status">
+
+          <span
+            className={`live-status-dot live-status-${connectionState}`}
+          />
+
+          <span>
+            {connectionState === "connected"
+              ? "Connected"
+              : connectionState ===
+                "connecting"
+              ? "Connecting..."
+              : connectionState ===
+                "disconnected"
+              ? "Disconnected"
+              : "Connection error"}
+          </span>
+
+        </div>
+
+      </header>
+
+
+      {/* =================================================
+          ERROR
+      ================================================= */}
+
+      {error && (
+        <div className="live-error">
+          {error}
+        </div>
+      )}
+
+
+      {/* =================================================
+          WINDOW
+      ================================================= */}
+
+      <div className="live-window">
+
+  <span>
+    LIVE WINDOW
+  </span>
+
+  <select
+    value={timeRange}
+    onChange={(event) =>
+      setTimeRange(event.target.value)
+    }
+    className="time-select"
+  >
+    <option value="30m">
+      Last 30 minutes
+    </option>
+
+    <option value="1h">
+      Last 1 hour
+    </option>
+
+    <option value="2h">
+      Last 2 hours
+    </option>
+  </select>
+
+  <span className="live-refresh">
+    Updates every 10 seconds
+  </span>
+
+</div>
+
+
+      {/* =================================================
+          SUMMARY
+      ================================================= */}
+
+      <section className="live-stat-grid">
+
+        <StatCard
+          label="Requests"
+          value={formatNumber(
+            summary.requests
+          )}
+          secondary={`${formatPercent(
+            summary.success,
+            summary.requests
+          )} successful`}
+        />
+
+        <StatCard
+          label="Successful"
+          value={formatNumber(
+            summary.success
+          )}
+          secondary={`${formatPercent(
+            summary.success,
+            summary.requests
+          )} success rate`}
+        />
+
+        <StatCard
+          label="Failed"
+          value={formatNumber(
+            summary.failed
+          )}
+          secondary={`${formatPercent(
+            summary.failed,
+            summary.requests
+          )} failed`}
+        />
+
+        <StatCard
+          label="Average latency"
+          value={formatLatency(
+            summary.avg_latency
+          )}
+        />
+
+        <StatCard
+          label="Live cost"
+          value={formatCost(
+            summary.cost
+          )}
+        />
+
+        <StatCard
+          label="Total tokens"
+          value={formatNumber(
+            summary.total_tokens
+          )}
+          secondary={`${formatNumber(
+            summary.input_tokens
+          )} input · ${formatNumber(
+            summary.output_tokens
+          )} output`}
+        />
+
+      </section>
+
+
+      {/* =================================================
+          REQUEST GRAPH
+      ================================================= */}
+
+      <section className="live-panel surface">
+
+        <div className="live-panel-header">
+
+          <div>
+
+            <h2>
+              Request activity
+            </h2>
+
+            <p>
+              Requests per minute over
+              the live window.
+            </p>
+
+          </div>
+
+          {lastUpdated && (
+            <span className="live-updated">
+              Updated{" "}
+              {lastUpdated.toLocaleTimeString(
+                [],
+                {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  second: "2-digit",
+                }
+              )}
+            </span>
+          )}
+
+        </div>
+
+
+        <RequestGraph
+          data={graph}
+        />
+
+      </section>
+
+
+      {/* =================================================
+          PROVIDERS
+      ================================================= */}
+
+      <div className="live-breakdown-grid">
+
+        <BreakdownTable
+          title="Providers"
+          data={providers}
+          type="provider"
+        />
+
+        <BreakdownTable
+          title="Models"
+          data={models}
+          type="model"
+        />
+
+      </div>
+
+
+      {/* =================================================
+          FOOTER NAV
+      ================================================= */}
+
+      <div className="live-footer">
+
+        <Link to="/analytics">
+          View full analytics →
+        </Link>
+
+        <span>
+          Live data is retained in Redis
+          for real-time monitoring.
+        </span>
+
+      </div>
+
+    </div>
+  );
+}

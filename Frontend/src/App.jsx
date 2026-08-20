@@ -4,8 +4,9 @@ import {
     Route,
 } from "react-router-dom";
 
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+import Login from "./pages/login";
+import Signup from "./pages/signup";
+import Dashboard from "./pages/Dashboard";
 import APIKeys from "./pages/APIKeys";
 import Analytics from "./pages/Analytics";
 import Live from "./pages/Live";
@@ -41,51 +42,44 @@ function App() {
                     PROTECTED ROUTES
                 ========================= */}
 
-                <Route element={<ProtectedRoute />}>
+<Route element={<ProtectedRoute />}>
 
-                    <Route
-                        path="/api-keys"
-                        element={<APIKeys />}
-                    />
+    <Route
+        path="/dashboard"
+        element={<Dashboard />}
+    />
 
-                        <Route
-                        path="/analytics"
-                        element={<Analytics />}
-                    />
+    <Route
+        path="/api-keys"
+        element={<APIKeys />}
+    />
 
-                    <Route
-                        path="/live"
-                        element={<Live />}
-                    />
+    <Route
+        path="/analytics"
+        element={<Analytics />}
+    />
 
-                    <Route
-                        path="/chat"
-                        element={
-                            <ProtectedRoute>
-                                <Chat />
-                            </ProtectedRoute>
-                        }
-                    />
+    <Route
+        path="/live"
+        element={<Live />}
+    />
 
-                    <Route
-                        path="/alerts"
-                        element={
-                            <ProtectedRoute>
-                                <Alerts />
-                            </ProtectedRoute>
-                        }
-                    />
+    <Route
+        path="/chat"
+        element={<Chat />}
+    />
 
-                    <Route
-                        path="/usage"
-                        element={
-                            <ProtectedRoute>
-                                <Usage />
-                            </ProtectedRoute>
-                        }
-                    />
+    <Route
+        path="/alerts"
+        element={<Alerts />}
+    />
 
-                </Route>
+    <Route
+        path="/usage"
+        element={<Usage />}
+    />
+
+</Route>
 
 
                 {/* =========================

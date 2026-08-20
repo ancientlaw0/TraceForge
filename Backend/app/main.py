@@ -55,6 +55,13 @@ app.include_router(chat_router)
 app.include_router(analytics_router)
 app.include_router(usage_router)
 
+for route in app.routes:
+    print(
+        "ROUTE:",
+        getattr(route, "path", None),
+        type(route).__name__,
+    )
+
 @app.get("/")
 async def root():
     return {

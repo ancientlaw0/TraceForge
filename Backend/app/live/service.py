@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from redis.asyncio import Redis
 from app.redis.client import redis_client
 from app.redis.keys import totals_key, provider_key, model_key, providers_set_key, models_set_key
@@ -29,15 +29,24 @@ class LiveService:
         self,
         since: datetime,
     ):
+        if since.tzinfo is not None:
+            since = since.astimezone(timezone.utc).replace(
+                tzinfo=None
+            )
+
         now = datetime.utcnow()
+
         current = since.replace(
             second=0,
             microsecond=0,
         )
+
         minutes = []
+
         while current <= now:
             minutes.append(current)
             current += timedelta(minutes=1)
+
         return minutes
 
     async def _summary(

@@ -1,144 +1,108 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { login, getMe } from "../api/auth";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 
-function Login() {
-    const navigate = useNavigate();
-    const location = useLocation();
+import AuthLayout from "../components/AuthLayout";
+import { login } from "../api/auth";
 
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+export default function Login() {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+  const justSignedUp = location.state?.signedUp;
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-        setError("");
-        setLoading(true);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-        try {
-            const data = await login(email, password);
+  async function handleSubmit(event) {
+    event.preventDefault();
 
-            localStorage.setItem(
-                "access_token",
-                data.access_token
-            );
-             const user = await getMe();
-            console.log("Login successful:", data);
-            console.log("Current user:", user);
+    setError("");
+    setLoading(true);
 
-            // Dashboard redirect will be added later.
+    try {
+      await login(email, password);
 
-        } catch (error) {
+      navigate("/dashboard");
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-            if (error.response) {
-                const status = error.response.status;
-
-                if (status === 401) {
-                    setError("Invalid email or password.");
-                }
-                else if (status === 422) {
-                    setError(
-                        "Please enter a valid email and password."
-                    );
-                }
-                else if (status >= 500) {
-                    setError(
-                        "Server error. Please try again later."
-                    );
-                }
-                else {
-                    setError(
-                        "Login failed. Please try again."
-                    );
-                }
-
-            } else if (error.request) {
-                setError(
-                    "Unable to connect to the server. Please try again."
-                );
-
-            } else {
-                setError(
-                    "Something went wrong. Please try again."
-                );
-            }
-
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div>
-            <h1>TraceForge</h1>
-
-            <h2>Login</h2>
-
-            {location.state?.message && (
-                <p>
-                    {location.state.message}
-                </p>
-            )}
-
-            {error && (
-                <p>
-                    {error}
-                </p>
-            )}
-
-            <form onSubmit={handleSubmit}>
-
-                <div>
-                    <label>Email</label>
-
-                    <input
-                        type="email"
-                        name="email"
-                        value={email}
-                        onChange={(event) =>
-                            setEmail(event.target.value)
-                        }
-                        disabled={loading}
-                    />
-                </div>
-
-                <div>
-                    <label>Password</label>
-
-                    <input
-                        type="password"
-                        name="password"
-                        value={password}
-                        onChange={(event) =>
-                            setPassword(event.target.value)
-                        }
-                        disabled={loading}
-                    />
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                >
-                    {loading ? "Logging in..." : "Login"}
-                </button>
-
-            </form>
-
-            <p>
-                Don't have an account?
-                <button
-                    type="button"
-                    onClick={() => navigate("/auth/signup")}
-                >
-                    Sign up
-                </button>
-            </p>
+  return (
+    <AuthLayout
+      eyebrow="Welcome back"
+      title="Log in to TraceForge"
+      subtitle="Track latency, cost, and errors across every model call."
+    >
+      {justSignedUp && (
+        <div className="auth-banner auth-banner-success">
+          Account created. Log in to continue.
         </div>
-    );
-}
+      )}
 
-export default Login;
+      {error && (
+        <div className="auth-banner auth-banner-error">
+          {error}
+        </div>
+      )}
+
+      <form
+        className="auth-form"
+        onSubmit={handleSubmit}
+      >
+
+        <label className="auth-field">
+          <span>Email</span>
+
+          <input
+            type="email"
+            value={email}
+            onChange={(event) =>
+              setEmail(event.target.value)
+            }
+            placeholder="you@company.com"
+            autoComplete="email"
+            required
+          />
+        </label>
+
+        <label className="auth-field">
+          <span>Password</span>
+
+          <input
+            type="password"
+            value={password}
+            onChange={(event) =>
+              setPassword(event.target.value)
+            }
+            placeholder="Your password"
+            autoComplete="current-password"
+            required
+          />
+        </label>
+
+        <button
+          className="auth-submit"
+          type="submit"
+          disabled={loading}
+        >
+          {loading ? "Logging in…" : "Log in"}
+        </button>
+
+      </form>
+
+      <p className="auth-switch">
+        New to TraceForge?{" "}
+        <Link to="/auth/signup">
+          Create an account
+        </Link>
+      </p>
+
+    </AuthLayout>
+  );
+}
