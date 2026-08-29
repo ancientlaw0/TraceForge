@@ -1,14 +1,11 @@
 import api from "./client";
 
-
-export async function getApiKeys() {
+export async function getAPIKeys() {
     const response = await api.get("/api-keys/");
-
     return response.data;
 }
 
-
-export async function createApiKey(name) {
+export async function createAPIKey(name) {
     const response = await api.post("/api-keys/", {
         name,
     });
@@ -16,7 +13,6 @@ export async function createApiKey(name) {
     return response.data;
 }
 
-
-export async function revokeApiKey(keyId) {
+export async function revokeAPIKey(keyId) {
     await api.delete(`/api-keys/${keyId}`);
 }

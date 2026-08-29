@@ -9,22 +9,26 @@ import {
 
 import "../css/Dashboard.css";
 const TIME_RANGES = [
-  {
-    value: "24h",
-    label: "Last 24 hours",
-  },
-  {
-    value: "7d",
-    label: "Last 7 days",
-  },
-  {
-    value: "30d",
-    label: "Last 30 days",
-  },
-  {
-    value: "all",
-    label: "All time",
-  },
+    {
+        value: "hour",
+        label: "Last hour",
+    },
+    {
+        value: "day",
+        label: "Last 24 hours",
+    },
+    {
+        value: "week",
+        label: "Last 7 days",
+    },
+    {
+        value: "month",
+        label: "Last 30 days",
+    },
+    {
+        value: "all",
+        label: "All time",
+    },
 ];
 
 function formatNumber(value) {
@@ -51,16 +55,20 @@ function formatLatency(value) {
 
 
 function formatChartLabel(timestamp, timeRange) {
-  const date = new Date(timestamp);
+    const date = new Date(timestamp);
 
+    if (timeRange === "hour") {
+        return date.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    }
 
-
-  return date.toLocaleDateString([], {
-    month: "short",
-    day: "numeric",
-  });
+    return date.toLocaleDateString([], {
+        month: "short",
+        day: "numeric",
+    });
 }
-
 
 function formatDate(timestamp) {
   return new Date(timestamp).toLocaleDateString(
@@ -258,7 +266,7 @@ export default function Dashboard() {
   const [timeseries, setTimeseries] =
     useState([]);
 
-const [timeRange, setTimeRange] = useState("all");
+const [timeRange, setTimeRange] = useState("week");
 
   const [loading, setLoading] =
     useState(true);
@@ -281,54 +289,63 @@ const [timeRange, setTimeRange] = useState("all");
    */
 
   useEffect(() => {
+      async function loadDashboardData() {
+          try {
+              setChartLoading(true);
+              setError("");
 
-    async function loadDashboard() {
+              const [
+                  overviewData,
+                  timeseriesData,
+              ] = await Promise.all([
+                  getOverview({
+                      time: timeRange,
+                  }),
+                  getTimeseries({
+                      time: timeRange,
+                  }),
+              ]);
 
-      try {
+              setOverview(overviewData);
+              setTimeseries(timeseriesData);
+              setLastUpdated(new Date());
 
-        setLoading(true);
-        setError("");
+          } catch (error) {
+              console.error(
+                  "Failed to load dashboard data:",
+                  error
+              );
 
-        const [
-          userData,
-          overviewData,
-        ] = await Promise.all([
-          getMe(),
-          getOverview(),
-        ]);
-
-        setUser(userData);
-        setOverview(overviewData);
-
-        setLastUpdated(
-          new Date()
-        );
-
-      } catch (error) {
-
-        console.error(
-          "Failed to load dashboard:",
-          error
-        );
-
-        setError(
-          error.message ||
-          "Failed to load dashboard data."
-        );
-
-      } finally {
-
-        setLoading(false);
-
+              setError(
+                  error.message ||
+                  "Failed to load dashboard data."
+              );
+          } finally {
+              setChartLoading(false);
+          }
       }
+
+      loadDashboardData();
+  }, [timeRange]);
+
+
+  useEffect(() => {
+    async function loadUser() {
+        try {
+            const userData = await getMe();
+            setUser(userData);
+        } catch (error) {
+            console.error(
+                "Failed to load user:",
+                error
+            );
+        } finally {
+            setLoading(false);
+        }
     }
 
-
-    loadDashboard();
-
-  }, []);
-
-
+    loadUser();
+}, []);
   /*
    * Load timeseries.
    *
@@ -343,97 +360,26 @@ const [timeRange, setTimeRange] = useState("all");
    */
 
   useEffect(() => {
+      async function loadTimeseries() {
+          try {
+              setChartLoading(true);
 
-    async function loadTimeseries() {
+              const data = await getTimeseries({
+                  time: timeRange,
+              });
 
-      try {
-
-        setChartLoading(true);
-
-        const data =
-          await getTimeseries();
-
-        const sorted = [
-          ...data,
-        ].sort(
-          (a, b) =>
-            new Date(a.timestamp) -
-            new Date(b.timestamp)
-        );
-
-
-        /*
-         * Determine how many milliseconds
-         * belong to each range.
-         */
-
-        const now =
-          Date.now();
-
-        const rangeMilliseconds = {
-
-          "24h":
-            24 *
-            60 *
-            60 *
-            1000,
-
-          "7d":
-            7 *
-            24 *
-            60 *
-            60 *
-            1000,
-
-          "30d":
-            30 *
-            24 *
-            60 *
-            60 *
-            1000,
-
-        };
-
-
-        let filtered = sorted;
-
-
-        if (timeRange !== "all") {
-
-          const cutoff =
-            now -
-            rangeMilliseconds[timeRange];
-
-          filtered =
-            sorted.filter(
-              (point) =>
-                new Date(
-                  point.timestamp
-                ).getTime() >= cutoff
-            );
-        }
-
-
-        setTimeseries(filtered);
-
-      } catch (error) {
-
-        console.error(
-          "Failed to load timeseries:",
-          error
-        );
-
-      } finally {
-
-        setChartLoading(false);
-
+              setTimeseries(data);
+          } catch (error) {
+              console.error(
+                  "Failed to load timeseries:",
+                  error
+              );
+          } finally {
+              setChartLoading(false);
+          }
       }
 
-    }
-
-
-    loadTimeseries();
-
+      loadTimeseries();
   }, [timeRange]);
 
 
@@ -442,110 +388,47 @@ const [timeRange, setTimeRange] = useState("all");
    */
 
   useEffect(() => {
-
-    const interval =
-      setInterval(
+    const interval = setInterval(
         async () => {
+            try {
+                const [
+                    overviewData,
+                    timeseriesData,
+                ] = await Promise.all([
+                    getOverview({
+                        time: timeRange,
+                    }),
+                    getTimeseries({
+                        time: timeRange,
+                    }),
+                ]);
 
-          try {
+                setOverview(
+                    overviewData
+                );
 
-            const [
-              overviewData,
-              timeseriesData,
-            ] = await Promise.all([
-              getOverview(),
-              getTimeseries(),
-            ]);
+                setTimeseries(
+                    timeseriesData
+                );
 
-            setOverview(
-              overviewData
-            );
+                setLastUpdated(
+                    new Date()
+                );
 
-            const sorted = [
-              ...timeseriesData,
-            ].sort(
-              (a, b) =>
-                new Date(a.timestamp) -
-                new Date(b.timestamp)
-            );
-
-            const now =
-              Date.now();
-
-            const rangeMilliseconds = {
-
-              "24h":
-                24 *
-                60 *
-                60 *
-                1000,
-
-              "7d":
-                7 *
-                24 *
-                60 *
-                60 *
-                1000,
-
-              "30d":
-                30 *
-                24 *
-                60 *
-                60 *
-                1000,
-
-            };
-
-            if (
-              timeRange === "all"
-            ) {
-
-              setTimeseries(sorted);
-
-            } else {
-
-              const cutoff =
-                now -
-                rangeMilliseconds[
-                  timeRange
-                ];
-
-              setTimeseries(
-                sorted.filter(
-                  (point) =>
-                    new Date(
-                      point.timestamp
-                    ).getTime() >=
-                    cutoff
-                )
-              );
-
+            } catch (error) {
+                console.error(
+                    "Dashboard refresh failed:",
+                    error
+                );
             }
-
-            setLastUpdated(
-              new Date()
-            );
-
-          } catch (error) {
-
-            console.error(
-              "Dashboard refresh failed:",
-              error
-            );
-
-          }
-
         },
-
         30 * 1000
-      );
-
+    );
 
     return () =>
-      clearInterval(interval);
+        clearInterval(interval);
 
-  }, [timeRange]);
-
+}, [timeRange]);
 
   const firstName =
     user?.email?.split("@")[0] ||
@@ -593,140 +476,10 @@ const [timeRange, setTimeRange] = useState("all");
 
     <div className="dashboard">
 
-      {/* SIDEBAR */}
-
-      <aside className="dashboard-sidebar">
-
-        <div className="sidebar-brand">
-          TraceForge
-        </div>
-
-
-        <nav className="sidebar-nav">
-
-          <div className="nav-section">
-
-            <Link
-              to="/dashboard"
-              className="nav-item nav-item-active"
-            >
-              <span className="nav-icon">
-                ⌂
-              </span>
-
-              Overview
-            </Link>
-
-          </div>
-
-
-          <div className="nav-section">
-
-            <p className="nav-section-label">
-              Observability
-            </p>
-
-            <Link
-              to="/traces"
-              className="nav-item"
-            >
-              <span className="nav-icon">
-                ⌁
-              </span>
-
-              Traces
-            </Link>
-
-            <Link
-              to="/analytics"
-              className="nav-item"
-            >
-              <span className="nav-icon">
-                ◫
-              </span>
-
-              Analytics
-            </Link>
-
-            <Link
-              to="/live"
-              className="nav-item"
-            >
-              <span className="nav-icon live-icon">
-                ●
-              </span>
-
-              Live
-            </Link>
-
-          </div>
-
-
-          <div className="nav-section">
-
-            <p className="nav-section-label">
-              Management
-            </p>
-
-            <Link
-              to="/alerts"
-              className="nav-item"
-            >
-              <span className="nav-icon">
-                ◇
-              </span>
-
-              Alerts
-            </Link>
-
-            <Link
-              to="/api-keys"
-              className="nav-item"
-            >
-              <span className="nav-icon">
-                ⌘
-              </span>
-
-              API Keys
-            </Link>
-
-            <Link
-              to="/usage"
-              className="nav-item"
-            >
-              <span className="nav-icon">
-                ◌
-              </span>
-
-              Usage
-            </Link>
-
-          </div>
-
-        </nav>
-
-
-        <div className="sidebar-bottom">
-
-          <Link
-            to="/settings"
-            className="nav-item"
-          >
-            <span className="nav-icon">
-              ⚙
-            </span>
-
-            Settings
-          </Link>
-
-        </div>
-
-      </aside>
-
 
       {/* MAIN */}
 
-      <main className="dashboard-main">
+      <main className="dashboard-page">
 
         <header className="dashboard-topbar">
 

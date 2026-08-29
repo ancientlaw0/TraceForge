@@ -1,3 +1,4 @@
+from typing import Any
 from pydantic import BaseModel
 from enum import Enum
 from datetime import datetime
@@ -94,3 +95,18 @@ class TimeSeriesResponse(BaseModel):
 class ErrorAnalyticsResponse(BaseModel):
     error_message: str
     count: int
+
+class TraceAnalyticsResponse(BaseModel):
+    trace_id: str
+    provider: str
+    model: str
+    prompt: str
+    response: str
+    latency_ms: float
+    input_tokens: int
+    output_tokens: int
+    cost: float
+    status: TraceStatus
+    error_message: str | None
+    metadata_trace: dict[str, Any] | None
+    created_at: datetime

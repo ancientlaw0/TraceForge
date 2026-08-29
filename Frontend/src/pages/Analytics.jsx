@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import "../css/analytics.css";
 
 import {
@@ -7,6 +8,7 @@ import {
     getProviders,
     getTimeseries,
     getErrors,
+    getTraces,
 } from "../api/analytics";
 
 import {
@@ -49,6 +51,7 @@ function Analytics() {
     const [providers, setProviders] = useState([]);
     const [timeseries, setTimeseries] = useState([]);
     const [errors, setErrors] = useState([]);
+    const [traces, setTraces] = useState([]);
 
     // Unfiltered catalogs for the dropdowns.
     const [providerCatalog, setProviderCatalog] = useState([]);
@@ -88,6 +91,10 @@ function Analytics() {
             {
                 name: "errors",
                 request: getErrors(filters),
+            },
+            {
+                name: "traces",
+                request: getTraces(filters),
             },
         ];
 
@@ -189,6 +196,14 @@ function Analytics() {
 
                     case "errors":
                         setErrors(
+                            Array.isArray(value)
+                                ? value
+                                : []
+                        );
+                        break;
+
+                    case "traces":
+                        setTraces(
                             Array.isArray(value)
                                 ? value
                                 : []
@@ -1575,6 +1590,12 @@ function Analytics() {
 
             </ChartCard>
 
+            <TraceExplorer
+                traces={traces}
+                error={errorsBySection.traces}
+            />
+
+
         </div>
     );
 }
@@ -1678,6 +1699,341 @@ function ChartCard({
 }
 
 
+function TraceExplorer({
+    traces,
+    error,
+}) {
+    const [selectedTrace, setSelectedTrace] =
+        useState(null);
+
+            useEffect(() => {
+                if (selectedTrace) {
+                    document.body.style.overflow = "hidden";
+                } else {
+                    document.body.style.overflow = "";
+                }
+
+                return () => {
+                    document.body.style.overflow = "";
+                };
+            }, [selectedTrace]);
+    return (
+        <ChartCard
+            title="Trace Explorer"
+            subtitle="Inspect individual requests and their complete telemetry"
+            error={error}
+            empty={!traces.length}
+        >
+
+            {/* =================================================
+                TRACE TABLE
+            ================================================= */}
+
+            <div className="table-wrapper trace-table-wrapper">
+
+                <table className="analytics-table trace-table">
+
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Provider</th>
+                            <th>Model</th>
+                            <th>Status</th>
+                            <th>Latency</th>
+                            <th>Input</th>
+                            <th>Output</th>
+                            <th>Cost</th>
+                            <th>Trace ID</th>
+                        </tr>
+                    </thead>
+
+
+                    <tbody>
+
+                        {traces.map((trace) => (
+
+                            <tr
+                                key={trace.trace_id}
+                                className={
+                                    `trace-row ${
+                                        selectedTrace?.trace_id ===
+                                        trace.trace_id
+                                            ? "trace-row-selected"
+                                            : ""
+                                    }`
+                                }
+                                onClick={() =>
+                                    setSelectedTrace(trace)
+                                }
+                            >
+
+                                <td>
+                                    {formatTraceTime(
+                                        trace.created_at
+                                    )}
+                                </td>
+
+
+                                <td>
+                                    <span className="provider-badge">
+                                        {trace.provider}
+                                    </span>
+                                </td>
+
+
+                                <td>
+                                    <span className="model-name">
+                                        {trace.model}
+                                    </span>
+                                </td>
+
+
+                                <td>
+                                    <span
+                                        className={
+                                            `trace-status ` +
+                                            `trace-status-${trace.status}`
+                                        }
+                                    >
+                                        {trace.status}
+                                    </span>
+                                </td>
+
+
+                                <td>
+                                    {formatLatency(
+                                        trace.latency_ms
+                                    )}
+                                </td>
+
+
+                                <td>
+                                    {formatNumber(
+                                        trace.input_tokens
+                                    )}
+                                </td>
+
+
+                                <td>
+                                    {formatNumber(
+                                        trace.output_tokens
+                                    )}
+                                </td>
+
+
+                                <td>
+                                    {formatCost(
+                                        trace.cost
+                                    )}
+                                </td>
+
+
+                                <td>
+                                    <span className="trace-id">
+                                        {trace.trace_id.slice(
+                                            0,
+                                            8
+                                        )}
+                                        …
+                                    </span>
+                                </td>
+
+                            </tr>
+
+                        ))}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            {/* =================================================
+                SELECTED TRACE DETAILS
+            ================================================= */}
+            {selectedTrace &&
+                createPortal(
+                    <div
+                        className="trace-modal-backdrop"
+                        onClick={() => setSelectedTrace(null)}
+                    >
+                        <div
+                            className="trace-modal"
+                            onClick={(event) =>
+                                event.stopPropagation()
+                            }
+                        >
+                            <TraceDetails
+                                trace={selectedTrace}
+                                onClose={() =>
+                                    setSelectedTrace(null)
+                                }
+                            />
+                        </div>
+                    </div>,
+                    document.body
+                )}
+        </ChartCard>
+    );
+}
+
+function TraceDetails({
+    trace,
+    onClose,
+}) {
+    return (
+        <div className="trace-details">
+
+            <div className="trace-details-header">
+
+                <div>
+                    <div className="analytics-eyebrow">
+                        TRACE
+                    </div>
+
+                    <h3>
+                        {trace.trace_id}
+                    </h3>
+                </div>
+
+                <button
+                    className="trace-close"
+                    onClick={onClose}
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <div className="trace-details-grid">
+
+                <TraceField
+                    label="Provider"
+                    value={trace.provider}
+                />
+
+                <TraceField
+                    label="Model"
+                    value={trace.model}
+                />
+
+                <TraceField
+                    label="Status"
+                    value={trace.status}
+                />
+
+                <TraceField
+                    label="Latency"
+                    value={formatLatency(
+                        trace.latency_ms
+                    )}
+                />
+
+                <TraceField
+                    label="Input Tokens"
+                    value={formatNumber(
+                        trace.input_tokens
+                    )}
+                />
+
+                <TraceField
+                    label="Output Tokens"
+                    value={formatNumber(
+                        trace.output_tokens
+                    )}
+                />
+
+                <TraceField
+                    label="Cost"
+                    value={formatCost(
+                        trace.cost
+                    )}
+                />
+
+                <TraceField
+                    label="Created"
+                    value={formatTraceTime(
+                        trace.created_at
+                    )}
+                />
+
+            </div>
+
+
+            <div className="trace-content-section">
+
+                <h4>Prompt</h4>
+
+                <pre>
+                    {trace.prompt || "—"}
+                </pre>
+
+            </div>
+
+
+            <div className="trace-content-section">
+
+                <h4>Response</h4>
+
+                <pre>
+                    {trace.response || "—"}
+                </pre>
+
+            </div>
+
+
+            {trace.error_message && (
+                <div className="trace-content-section">
+
+                    <h4>Error</h4>
+
+                    <pre>
+                        {trace.error_message}
+                    </pre>
+
+                </div>
+            )}
+
+
+            <div className="trace-content-section">
+
+                <h4>Metadata</h4>
+
+                <pre>
+                    {JSON.stringify(
+                        trace.metadata_trace,
+                        null,
+                        2
+                    )}
+                </pre>
+
+            </div>
+
+        </div>
+    );
+}
+
+function TraceField({
+    label,
+    value,
+}) {
+    return (
+        <div className="trace-field">
+
+            <span>
+                {label}
+            </span>
+
+            <strong>
+                {value}
+            </strong>
+
+        </div>
+    );
+}
+
 /* =============================================================
    HELPERS
 ============================================================= */
@@ -1769,6 +2125,29 @@ function formatTimestamp(timestamp) {
     );
 }
 
+function formatTraceTime(timestamp) {
+    if (!timestamp) {
+        return "—";
+    }
+
+    const date = new Date(timestamp);
+
+    if (Number.isNaN(date.getTime())) {
+        return "—";
+    }
+
+    return date.toLocaleString(
+        undefined,
+        {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
+        }
+    );
+}
 
 function truncateError(value) {
     if (!value) {

@@ -1,99 +1,113 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import {
-    getApiKeys,
-    createApiKey,
-    revokeApiKey,
+    getAPIKeys,
+    createAPIKey,
+    revokeAPIKey,
 } from "../api/apiKeys";
 
-
-function APIKeys() {
-    const [apiKeys, setApiKeys] = useState([]);
-
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [showSecretModal, setShowSecretModal] = useState(false);
-    const [showDetailsModal, setShowDetailsModal] = useState(false);
-    const [showRevokeModal, setShowRevokeModal] = useState(false);
-
-    const [keyName, setKeyName] = useState("");
-    const [createdKey, setCreatedKey] = useState("");
-
-    const [selectedKey, setSelectedKey] = useState(null);
-
-    const [creating, setCreating] = useState(false);
-    const [revoking, setRevoking] = useState(false);
-
-    const [copied, setCopied] = useState(false);
+import "../css/ApiKeys.css";
 
 
-    // --------------------------------------------------
-    // LOAD API KEYS
-    // --------------------------------------------------
+function formatDate(value) {
+    if (!value) {
+        return "—";
+    }
 
-    const loadApiKeys = async () => {
-        setLoading(true);
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "—";
+    }
+
+    return date.toLocaleDateString(
+        undefined,
+        {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        }
+    );
+}
+
+
+function maskKey() {
+    return "••••••••••••••••";
+}
+
+
+export default function APIKeys() {
+
+    const [keys, setKeys] = useState([]);
+
+    const [loading, setLoading] =
+        useState(true);
+
+    const [error, setError] =
+        useState("");
+
+    const [showCreate, setShowCreate] =
+        useState(false);
+
+    const [name, setName] =
+        useState("");
+
+    const [creating, setCreating] =
+        useState(false);
+
+    const [newKey, setNewKey] =
+        useState(null);
+
+    const [copied, setCopied] =
+        useState(false);
+
+    const [revoking, setRevoking] =
+        useState(null);
+
+
+    async function loadKeys() {
+
         setError("");
 
         try {
-            const data = await getApiKeys();
 
-            setApiKeys(Array.isArray(data) ? data : []);
+            const data =
+                await getAPIKeys();
+
+            setKeys(
+                Array.isArray(data)
+                    ? data
+                    : []
+            );
 
         } catch (error) {
 
-            // 401 is handled globally by Axios.
-            if (error.response?.status === 401) {
-                return;
-            }
-
-            if (error.response?.status >= 500) {
-                setError(
-                    "The server is currently unavailable. Please try again later."
-                );
-            }
-            else if (error.request) {
-                setError(
-                    "Unable to connect to TraceForge."
-                );
-            }
-            else {
-                setError(
-                    "Unable to load API keys."
-                );
-            }
+            setError(
+                error.message ||
+                "Unable to load API keys."
+            );
 
         } finally {
+
             setLoading(false);
+
         }
-    };
+    }
 
 
     useEffect(() => {
-        loadApiKeys();
+
+        loadKeys();
+
     }, []);
 
 
-    // --------------------------------------------------
-    // CREATE
-    // --------------------------------------------------
+    async function handleCreate(event) {
 
-    const handleCreate = async (event) => {
         event.preventDefault();
 
-        const trimmedName = keyName.trim();
-
-        if (!trimmedName) {
-            setError("API key name cannot be empty.");
-            return;
-        }
-
-        if (trimmedName.length > 100) {
-            setError(
-                "API key name must be 100 characters or less."
-            );
+        if (!name.trim()) {
             return;
         }
 
@@ -101,632 +115,494 @@ function APIKeys() {
         setError("");
 
         try {
-            const data = await createApiKey(trimmedName);
 
-            if (!data?.api_key) {
-                setError(
-                    "The server created the key but did not return the secret."
+            const data =
+                await createAPIKey(
+                    name.trim()
                 );
-                return;
-            }
 
-            // IMPORTANT:
-            // This is only kept in React state temporarily.
-            // We don't put the API secret into localStorage.
-            setCreatedKey(data.api_key);
+            /*
+             * The plaintext key is returned
+             * only during creation.
+             *
+             * Store it in state so the user
+             * can copy it now.
+             */
 
-            setKeyName("");
+            setNewKey(
+                data?.api_key || ""
+            );
 
-            setShowCreateModal(false);
-            setShowSecretModal(true);
+            setName("");
+            setShowCreate(false);
 
-            await loadApiKeys();
+            await loadKeys();
 
         } catch (error) {
 
-            if (error.response?.status === 401) {
-                return;
-            }
-
-            if (error.response?.status === 422) {
-                setError(
-                    "Invalid API key name."
-                );
-            }
-            else if (error.response?.status === 409) {
-                setError(
-                    "An API key with this name already exists."
-                );
-            }
-            else if (error.response?.status >= 500) {
-                setError(
-                    "Server error. Please try again later."
-                );
-            }
-            else if (error.request) {
-                setError(
-                    "Unable to connect to TraceForge."
-                );
-            }
-            else {
-                setError(
-                    "Unable to create API key."
-                );
-            }
+            setError(
+                error.message ||
+                "Unable to create API key."
+            );
 
         } finally {
+
             setCreating(false);
+
         }
-    };
+    }
 
 
-    // --------------------------------------------------
-    // REVOKE
-    // --------------------------------------------------
+    async function handleRevoke(keyId) {
 
-    const handleRevoke = async () => {
-        if (!selectedKey) {
+        const confirmed =
+            window.confirm(
+                "Revoke this API key? Applications using it will stop working."
+            );
+
+        if (!confirmed) {
             return;
         }
 
-        if (!selectedKey.is_active) {
-            setShowRevokeModal(false);
-            setSelectedKey(null);
-            return;
-        }
-
-        setRevoking(true);
+        setRevoking(keyId);
         setError("");
 
         try {
-            await revokeApiKey(selectedKey.id);
 
-            setShowRevokeModal(false);
-            setSelectedKey(null);
+            await revokeAPIKey(keyId);
 
-            await loadApiKeys();
+            setKeys((current) =>
+                current.map((key) =>
+                    key.id === keyId
+                        ? {
+                            ...key,
+                            is_active: false,
+                        }
+                        : key
+                )
+            );
 
         } catch (error) {
 
-            if (error.response?.status === 401) {
-                return;
-            }
-
-            if (error.response?.status === 404) {
-                setError(
-                    "This API key no longer exists."
-                );
-            }
-            else if (error.response?.status >= 500) {
-                setError(
-                    "Server error. Please try again later."
-                );
-            }
-            else if (error.request) {
-                setError(
-                    "Unable to connect to TraceForge."
-                );
-            }
-            else {
-                setError(
-                    "Unable to disable API key."
-                );
-            }
+            setError(
+                error.message ||
+                "Unable to revoke API key."
+            );
 
         } finally {
-            setRevoking(false);
+
+            setRevoking(null);
+
         }
-    };
+    }
 
 
-    // --------------------------------------------------
-    // COPY SECRET
-    // --------------------------------------------------
+    async function copyKey() {
 
-    const handleCopy = async () => {
-        if (!createdKey) {
+        if (!newKey) {
             return;
         }
 
         try {
-            await navigator.clipboard.writeText(createdKey);
+
+            await navigator.clipboard.writeText(
+                newKey
+            );
 
             setCopied(true);
 
             setTimeout(() => {
                 setCopied(false);
-            }, 2000);
+            }, 1800);
 
         } catch {
+
             setError(
-                "Unable to copy the API key. Please copy it manually."
+                "Unable to copy the API key."
             );
+
         }
-    };
+    }
 
-
-    // --------------------------------------------------
-    // CLOSE SECRET
-    // --------------------------------------------------
-
-    const closeSecretModal = () => {
-        setShowSecretModal(false);
-
-        // Destroy plaintext secret from React state.
-        setCreatedKey("");
-
-        setCopied(false);
-    };
-
-
-    // --------------------------------------------------
-    // OPEN DETAILS
-    // --------------------------------------------------
-
-    const openDetails = (apiKey) => {
-        setSelectedKey(apiKey);
-        setShowDetailsModal(true);
-    };
-
-
-    // --------------------------------------------------
-    // OPEN REVOKE
-    // --------------------------------------------------
-
-    const openRevoke = (apiKey) => {
-        if (!apiKey.is_active) {
-            return;
-        }
-
-        setSelectedKey(apiKey);
-        setShowRevokeModal(true);
-    };
-
-
-    // --------------------------------------------------
-    // UI
-    // --------------------------------------------------
 
     return (
-        <div>
+        <div className="page api-keys-page">
 
-            <header>
-                <h1>API Keys</h1>
+            <main className="page-container">
 
-                <button
-                    type="button"
-                    onClick={() => {
-                        setError("");
-                        setKeyName("");
-                        setShowCreateModal(true);
-                    }}
-                >
-                    + Create API Key
-                </button>
-            </header>
+                <div className="api-keys-header">
 
+                    <div>
 
-            {/* GLOBAL PAGE ERROR */}
+                        <p className="page-eyebrow">
+                            Management
+                        </p>
 
-            {error && (
-                <div role="alert">
-                    <p>{error}</p>
+                        <h1 className="page-title">
+                            API keys
+                        </h1>
+
+                        <p className="page-subtitle">
+                            Manage the credentials your
+                            applications use to send
+                            traces to TraceForge.
+                        </p>
+
+                    </div>
+
 
                     <button
-                        type="button"
-                        onClick={() => setError("")}
-                    >
-                        Dismiss
-                    </button>
-                </div>
-            )}
-
-
-            {/* LOADING */}
-
-            {loading && (
-                <div>
-                    <p>Loading API keys...</p>
-                </div>
-            )}
-
-
-            {/* EMPTY */}
-
-            {!loading && apiKeys.length === 0 && (
-                <div>
-
-                    <h2>No API keys yet</h2>
-
-                    <p>
-                        Create an API key to connect your
-                        application to TraceForge.
-                    </p>
-
-                    <button
-                        type="button"
+                        className="button button-primary"
                         onClick={() => {
+                            setShowCreate(true);
                             setError("");
-                            setShowCreateModal(true);
                         }}
                     >
-                        Create API Key
+                        + Create API key
                     </button>
 
                 </div>
-            )}
 
 
-            {/* KEY LIST */}
+                {error && (
+                    <div className="api-key-error">
+                        {error}
+                    </div>
+                )}
 
-            {!loading && apiKeys.length > 0 && (
-                <div>
 
-                    {apiKeys.map((apiKey) => (
+                {newKey && (
+                    <section className="new-key-banner">
 
-                        <div key={apiKey.id}>
+                        <div className="new-key-heading">
+
+                            <div>
+
+                                <p className="new-key-eyebrow">
+                                    API key created
+                                </p>
+
+                                <h2>
+                                    Copy this key now
+                                </h2>
+
+                                <p>
+                                    TraceForge does not store
+                                    the plaintext key, so you
+                                    won't be able to see it
+                                    again.
+                                </p>
+
+                            </div>
+
+                            <button
+                                className="new-key-close"
+                                onClick={() =>
+                                    setNewKey(null)
+                                }
+                                aria-label="Close"
+                            >
+                                ×
+                            </button>
+
+                        </div>
+
+
+                        <div className="key-copy-row">
+
+                            <code>
+                                {newKey}
+                            </code>
+
+                            <button
+                                className="button button-secondary"
+                                onClick={copyKey}
+                            >
+                                {copied
+                                    ? "Copied"
+                                    : "Copy key"}
+                            </button>
+
+                        </div>
+
+                    </section>
+                )}
+
+
+                {showCreate && (
+                    <section className="create-key-card surface">
+
+                        <div className="card-header">
 
                             <div>
 
                                 <h2>
-                                    {apiKey.name}
+                                    Create an API key
                                 </h2>
 
                                 <p>
-                                    Key ID: {apiKey.id}
-                                </p>
-
-                                <p>
-                                    Created:{" "}
-                                    {apiKey.created_at
-                                        ? new Date(
-                                              apiKey.created_at
-                                          ).toLocaleString()
-                                        : "Unknown"}
-                                </p>
-
-                                <p>
-                                    Last used:{" "}
-                                    {apiKey.last_used_at
-                                        ? new Date(
-                                              apiKey.last_used_at
-                                          ).toLocaleString()
-                                        : "Never"}
+                                    Give the key a name so
+                                    you know where it is used.
                                 </p>
 
                             </div>
 
-
-                            <div>
-
-                                <span>
-                                    {apiKey.is_active
-                                        ? "Active"
-                                        : "Disabled"}
-                                </span>
-
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        openDetails(apiKey)
-                                    }
-                                >
-                                    View
-                                </button>
-
-
-                                {apiKey.is_active && (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            openRevoke(apiKey)
-                                        }
-                                    >
-                                        Disable
-                                    </button>
-                                )}
-
-                            </div>
+                            <button
+                                className="close-button"
+                                onClick={() =>
+                                    setShowCreate(false)
+                                }
+                            >
+                                ×
+                            </button>
 
                         </div>
 
-                    ))}
-
-                </div>
-            )}
-
-
-            {/* ==========================================
-                CREATE MODAL
-            ========================================== */}
-
-            {showCreateModal && (
-
-                <div role="dialog">
-
-                    <div>
-
-                        <h2>
-                            Create API Key
-                        </h2>
 
                         <form
+                            className="create-key-form"
                             onSubmit={handleCreate}
                         >
 
-                            <label>
-                                Key name
+                            <label className="field">
+
+                                <span>
+                                    Key name
+                                </span>
+
+                                <input
+                                    value={name}
+                                    onChange={(event) =>
+                                        setName(
+                                            event.target.value
+                                        )
+                                    }
+                                    placeholder="e.g. Production"
+                                    autoFocus
+                                    required
+                                />
+
                             </label>
 
-                            <input
-                                type="text"
-                                value={keyName}
-                                onChange={(event) =>
-                                    setKeyName(
-                                        event.target.value
-                                    )
-                                }
-                                placeholder="e.g. Production"
-                                maxLength={100}
-                                disabled={creating}
-                                autoFocus
-                            />
 
-
-                            <p>
-                                Give this key a name so you
-                                know where it is being used.
-                            </p>
-
-
-                            <div>
+                            <div className="create-key-actions">
 
                                 <button
                                     type="button"
+                                    className="button button-secondary"
                                     onClick={() =>
-                                        setShowCreateModal(false)
+                                        setShowCreate(false)
                                     }
-                                    disabled={creating}
                                 >
                                     Cancel
                                 </button>
 
                                 <button
                                     type="submit"
+                                    className="button button-primary"
                                     disabled={
                                         creating ||
-                                        !keyName.trim()
+                                        !name.trim()
                                     }
                                 >
                                     {creating
-                                        ? "Creating..."
-                                        : "Create API Key"}
+                                        ? "Creating…"
+                                        : "Create key"}
                                 </button>
 
                             </div>
 
                         </form>
 
-                    </div>
-
-                </div>
-
-            )}
+                    </section>
+                )}
 
 
-            {/* ==========================================
-                SECRET MODAL
-            ========================================== */}
+                <section className="keys-section">
 
-            {showSecretModal && (
-
-                <div role="dialog">
-
-                    <div>
-
-                        <h2>
-                            API Key Created
-                        </h2>
-
-                        <p>
-                            Copy this key now.
-                        </p>
-
-                        <p>
-                            <strong>
-                                You will not be able to
-                                view the secret again.
-                            </strong>
-                        </p>
-
-
-                        <div>
-
-                            <code>
-                                {createdKey}
-                            </code>
-
-                            <button
-                                type="button"
-                                onClick={handleCopy}
-                            >
-                                {copied
-                                    ? "Copied!"
-                                    : "Copy"}
-                            </button>
-
-                        </div>
-
-
-                        <button
-                            type="button"
-                            onClick={closeSecretModal}
-                        >
-                            Done
-                        </button>
-
-                    </div>
-
-                </div>
-
-            )}
-
-
-            {/* ==========================================
-                DETAILS MODAL
-            ========================================== */}
-
-            {showDetailsModal &&
-                selectedKey && (
-
-                    <div role="dialog">
+                    <div className="section-heading">
 
                         <div>
 
                             <h2>
-                                API Key Details
+                                Your API keys
                             </h2>
 
-
                             <p>
-                                <strong>
-                                    Name:
-                                </strong>{" "}
-                                {selectedKey.name}
+                                Credentials associated with
+                                your account.
                             </p>
-
-
-                            <p>
-                                <strong>
-                                    ID:
-                                </strong>{" "}
-                                {selectedKey.id}
-                            </p>
-
-
-                            <p>
-                                <strong>
-                                    Status:
-                                </strong>{" "}
-                                {selectedKey.is_active
-                                    ? "Active"
-                                    : "Disabled"}
-                            </p>
-
-
-                            <p>
-                                <strong>
-                                    Created:
-                                </strong>{" "}
-                                {selectedKey.created_at
-                                    ? new Date(
-                                          selectedKey.created_at
-                                      ).toLocaleString()
-                                    : "Unknown"}
-                            </p>
-
-
-                            <p>
-                                <strong>
-                                    Last used:
-                                </strong>{" "}
-                                {selectedKey.last_used_at
-                                    ? new Date(
-                                          selectedKey.last_used_at
-                                      ).toLocaleString()
-                                    : "Never"}
-                            </p>
-
-
-                            <p>
-                                <strong>
-                                    Secret:
-                                </strong>{" "}
-                                Hidden
-                            </p>
-
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowDetailsModal(false);
-                                    setSelectedKey(null);
-                                }}
-                            >
-                                Close
-                            </button>
 
                         </div>
 
-                    </div>
-
-                )}
-
-
-            {/* ==========================================
-                REVOKE MODAL
-            ========================================== */}
-
-            {showRevokeModal &&
-                selectedKey && (
-
-                    <div role="dialog">
-
-                        <div>
-
-                            <h2>
-                                Disable API Key?
-                            </h2>
-
-
-                            <p>
-                                Are you sure you want to
-                                disable{" "}
-                                <strong>
-                                    {selectedKey.name}
-                                </strong>
-                                ?
-                            </p>
-
-
-                            <p>
-                                Applications using this key
-                                will no longer be able to
-                                authenticate with TraceForge.
-                            </p>
-
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowRevokeModal(false);
-                                    setSelectedKey(null);
-                                }}
-                                disabled={revoking}
-                            >
-                                Cancel
-                            </button>
-
-
-                            <button
-                                type="button"
-                                onClick={handleRevoke}
-                                disabled={revoking}
-                            >
-                                {revoking
-                                    ? "Disabling..."
-                                    : "Disable API Key"}
-                            </button>
-
-                        </div>
+                        <span className="key-count">
+                            {keys.length}{" "}
+                            {keys.length === 1
+                                ? "key"
+                                : "keys"}
+                        </span>
 
                     </div>
 
-                )}
+
+                    <div className="keys-list surface">
+
+                        {loading ? (
+
+                            <div className="keys-empty">
+                                Loading API keys…
+                            </div>
+
+                        ) : keys.length === 0 ? (
+
+                            <div className="keys-empty">
+
+                                <div className="empty-icon">
+                                    ◇
+                                </div>
+
+                                <h3>
+                                    No API keys yet
+                                </h3>
+
+                                <p>
+                                    Create your first key
+                                    to start sending traces
+                                    from an application.
+                                </p>
+
+                                <button
+                                    className="button button-primary"
+                                    onClick={() =>
+                                        setShowCreate(true)
+                                    }
+                                >
+                                    Create your first key
+                                </button>
+
+                            </div>
+
+                        ) : (
+
+                            <div className="key-table">
+
+                               <div className="key-table-header">
+
+    <span>Name</span>
+
+    <span>Key</span>
+
+    <span>Created</span>
+
+    <span>Last used</span>
+
+    <span>Status</span>
+
+    <span></span>
+
+</div>
+
+
+                                {keys.map((key) => (
+
+<div
+    className="key-row"
+    key={key.id}
+>
+
+    <div className="key-name">
+        <strong>
+            {key.name}
+        </strong>
+    </div>
+
+
+    <code className="key-preview">
+        {maskKey()}
+    </code>
+
+
+    <span className="key-date">
+        {formatDate(key.created_at)}
+    </span>
+
+
+    <span className="key-date">
+        {key.last_used_at
+            ? formatDate(key.last_used_at)
+            : "Never"}
+    </span>
+
+
+    <span
+        className={
+            key.is_active
+                ? "status-pill status-active"
+                : "status-pill status-revoked"
+        }
+    >
+        {key.is_active
+            ? "Active"
+            : "Revoked"}
+    </span>
+
+
+    <div className="key-actions">
+
+        {key.is_active && (
+            <button
+                className="revoke-button"
+                disabled={revoking === key.id}
+                onClick={() =>
+                    handleRevoke(key.id)
+                }
+            >
+                {revoking === key.id
+                    ? "Revoking…"
+                    : "Revoke"}
+            </button>
+        )}
+
+    </div>
+
+</div>
+
+                                ))}
+
+                            </div>
+
+                        )}
+
+                    </div>
+
+                </section>
+
+
+                <div className="api-key-note">
+
+                    <span>
+                        ◌
+                    </span>
+
+                    <p>
+                        API keys are shown in plaintext only
+                        once, immediately after creation.
+                        Keep them private and never commit them
+                        to source control.
+                    </p>
+
+                </div>
+
+
+                <Link
+                    to="/dashboard"
+                    className="back-dashboard"
+                >
+                    ← Back to dashboard
+                </Link>
+
+            </main>
 
         </div>
     );
 }
-
-export default APIKeys;

@@ -543,6 +543,7 @@
 }
 
 
+
 @media (max-width: 800px) {
 
     .analytics-page {
@@ -612,4 +613,512 @@
     .chart-card {
         padding: 17px 13px 14px;
     }
+}
+@media (max-width: 800px) {
+
+    .trace-details-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+/* ============================================================
+   TRACE EXPLORER
+============================================================ */
+
+.trace-table {
+    min-width: 900px;
+}
+
+.trace-row {
+    cursor: pointer;
+}
+
+.trace-row:hover {
+    background: #f5f8f6 !important;
+}
+
+.trace-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 7px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 650;
+    text-transform: uppercase;
+}
+
+.trace-status-success {
+    background: #edf5f0;
+    color: #426e5e;
+}
+
+.trace-status-error {
+    background: #fff1f1;
+    color: #a65353;
+}
+
+.trace-status-timeout {
+    background: #fff7eb;
+    color: #a07842;
+}
+
+.trace-id {
+    color: #71807a;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+
+/* ============================================================
+   TRACE DETAILS
+============================================================ */
+
+.trace-details-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.trace-details-header h3 {
+    margin: 0;
+    color: #172824;
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: 500;
+    word-break: break-all;
+}
+
+.trace-close {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #d6d8d3;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #59645f;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.trace-close:hover {
+    background: #f4f7f5;
+}
+
+.trace-details-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.trace-field {
+    padding: 12px;
+    border: 1px solid #e1e3df;
+    border-radius: 8px;
+    background: #fafcfb;
+}
+
+.trace-field span {
+    display: block;
+    margin-bottom: 5px;
+    color: #858d89;
+    font-size: 10px;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.trace-field strong {
+    color: #24352f;
+    font-size: 12px;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.trace-content-section {
+    margin-top: 18px;
+}
+
+.trace-content-section h4 {
+    margin: 0 0 8px;
+    color: #59645f;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.trace-content-section pre {
+    max-height: 300px;
+    margin: 0;
+    padding: 14px;
+    overflow: auto;
+    border: 1px solid #e1e3df;
+    border-radius: 8px;
+    background: #f8faf9;
+    color: #34443e;
+    font-family: monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+/*
+
+===========================================================
+   TRACE TABLE — FORCE NORMAL TABLE LAYOUT
+============================================================ */
+
+.trace-table {
+    width: 100%;
+    min-width: 1000px;
+    table-layout: fixed;
+}
+
+.trace-table thead tr,
+.trace-table tbody tr {
+    display: table-row !important;
+}
+
+.trace-table thead th,
+.trace-table tbody td {
+    display: table-cell !important;
+    vertical-align: middle;
+}
+
+/* Give the trace columns sensible widths */
+
+.trace-table th:nth-child(1),
+.trace-table td:nth-child(1) {
+    width: 15%;
+}
+
+.trace-table th:nth-child(2),
+.trace-table td:nth-child(2) {
+    width: 10%;
+}
+
+.trace-table th:nth-child(3),
+.trace-table td:nth-child(3) {
+    width: 17%;
+}
+
+.trace-table th:nth-child(4),
+.trace-table td:nth-child(4) {
+    width: 10%;
+}
+
+.trace-table th:nth-child(5),
+.trace-table td:nth-child(5) {
+    width: 10%;
+}
+
+.trace-table th:nth-child(6),
+.trace-table td:nth-child(6) {
+    width: 8%;
+}
+
+.trace-table th:nth-child(7),
+.trace-table td:nth-child(7) {
+    width: 8%;
+}
+
+.trace-table th:nth-child(8),
+.trace-table td:nth-child(8) {
+    width: 10%;
+}
+
+.trace-table th:nth-child(9),
+.trace-table td:nth-child(9) {
+    width: 12%;
+}
+
+/* ============================================================
+   TRACE DETAILS — INLINE
+============================================================ */
+
+.trace-details {
+    width: 100%;
+}
+
+.trace-details-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.trace-details-header h3 {
+    margin: 5px 0 0;
+
+    color: var(--color-text);
+
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+
+    word-break: break-all;
+}
+
+
+/* ============================================================
+   CLOSE BUTTON
+============================================================ */
+
+.trace-close {
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+
+    font-size: 20px;
+
+    cursor: pointer;
+
+    transition:
+        background 120ms ease,
+        color 120ms ease;
+}
+
+.trace-close:hover {
+    background: var(--color-primary-tint);
+    color: var(--color-primary);
+}
+
+
+/* ============================================================
+   TRACE INFORMATION GRID
+============================================================ */
+
+.trace-details-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 10px;
+
+    margin-bottom: 24px;
+}
+
+.trace-field {
+    min-width: 0;
+
+    padding: 14px;
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.trace-field span {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: var(--color-text-muted);
+
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.trace-field strong {
+    display: block;
+
+    color: var(--color-text);
+
+    font-size: 13px;
+    font-weight: 600;
+
+    word-break: break-word;
+}
+
+
+/* ============================================================
+   PROMPT / RESPONSE / ERROR / METADATA
+============================================================ */
+
+.trace-content-section {
+    margin-top: 20px;
+}
+
+.trace-content-section h4 {
+    margin: 0 0 8px;
+
+    color: var(--color-text-muted);
+
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.trace-content-section pre {
+    width: 100%;
+    max-height: 320px;
+
+    box-sizing: border-box;
+
+    margin: 0;
+    padding: 14px;
+
+    overflow: auto;
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+
+    background: rgba(255, 255, 255, 0.45);
+
+    color: var(--color-text);
+
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+
+/* ============================================================
+   SELECTED TRACE
+============================================================ */
+
+.trace-row {
+    cursor: pointer;
+}
+
+.trace-row-selected {
+    background: rgba(155, 190, 170, 0.08);
+}
+
+.trace-row:hover {
+    background: rgba(155, 190, 170, 0.08);
+}
+
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+
+@media (max-width: 800px) {
+
+    .trace-details-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+@media (max-width: 560px) {
+
+    .trace-details-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+/* ============================================================
+   TRACE MODAL
+============================================================ */
+
+.trace-modal-backdrop {
+    position: fixed;
+    inset: 0;
+
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 32px;
+
+    background: rgba(15, 23, 42, 0.45);
+}
+
+
+.trace-modal {
+    width: min(1100px, 90vw);
+    max-height: 90vh;
+
+    overflow-y: auto;
+
+    background: var(--color-bg);
+
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+
+    box-shadow:
+        0 24px 80px rgba(15, 23, 42, 0.25);
+}
+
+.trace-modal {
+    width: min(1100px, 90vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    box-shadow:
+        0 24px 80px rgba(15, 23, 42, 0.25);
+}
+
+
+/* ============================================================
+   TRACE MODAL
+============================================================ */
+
+.trace-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 32px;
+
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.trace-modal {
+    width: min(1100px, calc(100vw - 64px));
+    max-height: calc(100vh - 64px);
+
+    box-sizing: border-box;
+
+    overflow-y: auto;
+
+    padding: 28px 30px 30px;
+
+    background: var(--color-bg);
+
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+
+    box-shadow:
+        0 24px 80px rgba(15, 23, 42, 0.25);
 }

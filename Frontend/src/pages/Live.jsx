@@ -38,7 +38,38 @@ function formatPercent(value, total) {
     100
   ).toFixed(1)}%`;
 }
+function formatISTTime(value) {
+  if (!value) return "";
 
+  const [hours, minutes] = value.split(":").map(Number);
+
+  if (
+    Number.isNaN(hours) ||
+    Number.isNaN(minutes)
+  ) {
+    return value;
+  }
+
+  const totalMinutes =
+    hours * 60 +
+    minutes +
+    330;
+
+  const normalized =
+    ((totalMinutes % 1440) + 1440) % 1440;
+
+  const istHours = Math.floor(normalized / 60);
+  const istMinutes = normalized % 60;
+
+  const suffix = istHours >= 12 ? "PM" : "AM";
+
+  const displayHour =
+    istHours % 12 || 12;
+
+  return `${displayHour}:${String(
+    istMinutes
+  ).padStart(2, "0")} ${suffix}`;
+}
 const LIVE_RANGES = {
   "30m": 30,
   "1h": 60,
@@ -136,11 +167,10 @@ const x =
   return (
     <div className="live-chart-wrapper">
 
-      <svg
-        className="live-chart"
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
-      >
+    <svg
+      className="live-chart"
+      viewBox={`0 0 ${width} ${height}`}
+    >
 
         {/* Grid */}
 
@@ -241,7 +271,7 @@ const x =
               textAnchor="middle"
               className="chart-axis-label"
             >
-              {point.minute}
+             {formatISTTime(point.minute)}
             </text>
           );
         })}
@@ -763,20 +793,18 @@ export default function Live() {
 
           </div>
 
-          {lastUpdated && (
-            <span className="live-updated">
-              Updated{" "}
-              {lastUpdated.toLocaleTimeString(
-                [],
-                {
-                  hour: "numeric",
-                  minute: "2-digit",
-                  second: "2-digit",
-                }
-              )}
-            </span>
-          )}
-
+{lastUpdated && (
+  <span className="live-updated">
+    Updated{" "}
+    {lastUpdated.toLocaleTimeString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    })}
+  </span>
+)}
         </div>
 
 

@@ -1,0 +1,277 @@
+.protected-layout {
+    --sidebar-width: 220px;
+
+    min-height: 100vh;
+    width: 100%;
+
+    background: var(--color-bg);
+
+    transition: none;
+}
+
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.dashboard-sidebar {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+    bottom: 0;
+
+    width: var(--sidebar-width);
+
+    box-sizing: border-box;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 30px 16px 20px;
+
+    background: var(--color-primary);
+    color: var(--color-bg);
+
+    z-index: 1000;
+
+    transition:
+        width 180ms ease;
+
+    overflow: visible;
+}
+
+
+/* =========================================================
+   BRAND
+========================================================= */
+
+.sidebar-brand {
+    height: 30px;
+
+    padding: 0 12px 34px;
+
+    color: var(--color-bg);
+
+    font-family: var(--font-display);
+    font-size: 25px;
+    font-weight: 600;
+
+    line-height: 1.2;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    transition:
+        opacity 120ms ease;
+}
+
+
+/* =========================================================
+   TOGGLE
+========================================================= */
+
+.sidebar-toggle {
+    position: absolute;
+
+    top: 80px;
+    right: -16px;
+
+    width: 32px;
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+
+    background: var(--color-bg);
+    color: var(--color-primary);
+
+    cursor: pointer;
+
+    font-size: 22px;
+    line-height: 1;
+
+    z-index: 1100;
+}
+
+
+/* =========================================================
+   NAV
+========================================================= */
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+
+    gap: 25px;
+}
+
+
+.nav-section {
+    display: flex;
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+
+.nav-section-label {
+    margin: 0 12px 7px;
+
+    color: rgba(246, 245, 240, 0.52);
+
+    font-family: var(--font-mono);
+    font-size: 9px;
+
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+
+    white-space: nowrap;
+}
+
+
+.nav-item {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    min-height: 36px;
+
+    padding: 8px 12px;
+
+    border-radius: var(--radius-sm);
+
+    color: rgba(246, 245, 240, 0.72);
+
+    font-size: 13px;
+
+    text-decoration: none;
+
+    transition:
+        background 120ms ease,
+        color 120ms ease;
+}
+
+
+.nav-item:hover {
+    background: rgba(246, 245, 240, 0.08);
+    color: var(--color-bg);
+}
+
+
+.nav-item-active {
+    background: rgba(246, 245, 240, 0.12);
+    color: var(--color-bg);
+}
+
+
+.nav-icon {
+    flex: 0 0 17px;
+
+    width: 17px;
+
+    font-family: var(--font-mono);
+    font-size: 14px;
+
+    text-align: center;
+}
+
+
+.live-icon {
+    color: #9BBEAA;
+    font-size: 9px;
+}
+
+
+.nav-label {
+    white-space: nowrap;
+
+    transition:
+        opacity 120ms ease;
+}
+
+
+/* =========================================================
+   CONTENT
+========================================================= */
+
+.protected-content {
+    min-height: 100vh;
+
+    margin-left: var(--sidebar-width);
+
+    min-width: 0;
+
+    transition:
+        margin-left 180ms ease;
+}
+
+
+/* =========================================================
+   COLLAPSED
+========================================================= */
+
+.protected-layout.sidebar-collapsed {
+    --sidebar-width: 68px;
+}
+
+
+.sidebar-collapsed .dashboard-sidebar {
+    width: 68px;
+}
+
+
+.sidebar-collapsed .sidebar-brand {
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+
+.sidebar-collapsed .nav-section-label {
+    display: none;
+}
+
+
+.sidebar-collapsed .nav-item {
+    justify-content: center;
+
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+
+.sidebar-collapsed .nav-icon {
+    margin: 0;
+}
+
+
+.sidebar-collapsed .nav-label {
+    display: none;
+}
+
+
+.sidebar-collapsed .sidebar-nav {
+    gap: 25px;
+}
+
+.logout-item {
+    width: 100%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    color: rgb(234, 5, 5);
+}
+
+.logout-item:hover {
+    background: rgba(226, 9, 9, 0.878);
+    color: var(--color-bg);
+}

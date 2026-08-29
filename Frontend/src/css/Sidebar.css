@@ -1,0 +1,355 @@
+/* =========================================================
+   GLOBAL APPLICATION LAYOUT
+========================================================= */
+
+:root {
+    --sidebar-expanded: 220px;
+    --sidebar-collapsed: 68px;
+}
+
+
+/* =========================================================
+   APP SHELL
+========================================================= */
+
+.app-shell {
+    --current-sidebar-width: var(--sidebar-expanded);
+
+    min-height: 100vh;
+
+    transition:
+        --current-sidebar-width 180ms ease;
+}
+
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.app-sidebar {
+
+    position: fixed;
+
+    top: 0;
+    left: 0;
+    bottom: 0;
+
+    width: var(--current-sidebar-width);
+
+    box-sizing: border-box;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 30px 12px 20px;
+
+    background: var(--color-primary);
+    color: var(--color-bg);
+
+    z-index: 1000;
+
+    overflow: visible;
+
+    transition:
+        width 180ms ease;
+}
+
+
+/* =========================================================
+   COLLAPSED STATE
+========================================================= */
+
+.sidebar-collapsed {
+    --current-sidebar-width: var(--sidebar-collapsed);
+}
+
+
+/* =========================================================
+   BRAND
+========================================================= */
+
+.sidebar-brand {
+
+    height: 34px;
+
+    padding: 0 10px 34px;
+
+    display: flex;
+    align-items: center;
+
+    color: var(--color-bg);
+
+    font-family: var(--font-display);
+
+    font-size: 25px;
+    font-weight: 600;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+}
+
+
+.brand-full {
+    opacity: 1;
+
+    transition:
+        opacity 120ms ease;
+}
+
+
+.brand-short {
+    display: none;
+}
+
+
+/* Collapsed logo */
+
+.sidebar-collapsed .brand-full {
+    display: none;
+}
+
+.sidebar-collapsed .brand-short {
+    display: block;
+}
+
+
+/* =========================================================
+   TOGGLE
+========================================================= */
+
+.sidebar-toggle {
+
+    position: absolute;
+
+    top: 18px;
+    right: -13px;
+
+    width: 26px;
+    height: 26px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border: 1px solid var(--color-border);
+
+    border-radius: 50%;
+
+    background: var(--color-bg);
+
+    color: var(--color-primary);
+
+    font-family: var(--font-mono);
+
+    font-size: 18px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.08);
+
+    z-index: 1100;
+
+    transition:
+        background 120ms ease,
+        transform 120ms ease;
+}
+
+
+.sidebar-toggle:hover {
+    transform: scale(1.05);
+}
+
+
+/* =========================================================
+   NAV
+========================================================= */
+
+.sidebar-nav {
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 25px;
+
+    width: 100%;
+}
+
+
+/* =========================================================
+   SECTIONS
+========================================================= */
+
+.nav-section {
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+
+.nav-section-label {
+
+    margin: 0 12px 7px;
+
+    color: rgba(246, 245, 240, 0.52);
+
+    font-family: var(--font-mono);
+
+    font-size: 9px;
+
+    letter-spacing: 0.11em;
+
+    text-transform: uppercase;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    transition:
+        opacity 120ms ease;
+}
+
+
+/* Hide section labels when collapsed */
+
+.sidebar-collapsed .nav-section-label {
+    opacity: 0;
+    height: 0;
+    margin: 0;
+}
+
+
+/* =========================================================
+   NAV ITEMS
+========================================================= */
+
+.nav-item {
+
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    min-height: 36px;
+
+    padding: 8px 12px;
+
+    border-radius: var(--radius-sm);
+
+    box-sizing: border-box;
+
+    color: rgba(246, 245, 240, 0.72);
+
+    font-size: 13px;
+
+    text-decoration: none;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    transition:
+        background 120ms ease,
+        color 120ms ease,
+        padding 180ms ease;
+}
+
+
+.nav-item:hover {
+
+    background:
+        rgba(246, 245, 240, 0.08);
+
+    color:
+        var(--color-bg);
+}
+
+
+.nav-item-active {
+
+    background:
+        rgba(246, 245, 240, 0.12);
+
+    color:
+        var(--color-bg);
+}
+
+
+/* =========================================================
+   ICON
+========================================================= */
+
+.nav-icon {
+
+    width: 17px;
+    min-width: 17px;
+
+    font-family: var(--font-mono);
+
+    font-size: 14px;
+
+    text-align: center;
+}
+
+
+.live-icon {
+
+    color: #9BBEAA;
+
+    font-size: 9px;
+}
+
+
+/* =========================================================
+   LABEL
+========================================================= */
+
+.nav-label {
+
+    opacity: 1;
+
+    transition:
+        opacity 100ms ease;
+}
+
+
+/* =========================================================
+   COLLAPSED NAV
+========================================================= */
+
+.sidebar-collapsed .nav-item {
+
+    justify-content: center;
+
+    gap: 0;
+
+    padding-left: 0;
+    padding-right: 0;
+}
+
+
+.sidebar-collapsed .nav-label {
+
+    display: none;
+}
+
+
+/* =========================================================
+   PAGE CONTENT
+========================================================= */
+
+.app-content {
+
+    min-height: 100vh;
+
+    margin-left: var(--current-sidebar-width);
+
+    transition:
+        margin-left 180ms ease;
+}

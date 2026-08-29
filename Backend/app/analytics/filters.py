@@ -1,7 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import Select
 from app.models import Trace, User
 from .schemas import AnalyticsFilter, TimeFilter
+
 def apply_trace_filters(
     stmt: Select,
     user: User,
@@ -23,9 +24,10 @@ def apply_trace_filters(
 
     elif filters.time != TimeFilter.custom:
         stmt = stmt.where(
-            Trace.created_at >=
-            datetime.utcnow() -
-            TIME_DELTAS[filters.time]
+            Trace.created_at >= (
+                datetime.now(timezone.utc)
+                - TIME_DELTAS[filters.time]
+            )
         )
 
     else:

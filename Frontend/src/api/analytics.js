@@ -71,3 +71,11 @@ export async function getErrors(filters = {}) {
 
   return response.data;
 }
+
+export async function getTraces(filters = {}) {
+  const response = await api.get("/analytics/traces", {
+    params: buildParams(filters),
+  });
+
+  return response.data;
+}

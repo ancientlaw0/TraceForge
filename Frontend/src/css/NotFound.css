@@ -1,0 +1,64 @@
+.not-found-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #f8fbfa;
+    color: #253b35;
+
+    font-family: "Poppins", sans-serif;
+}
+
+.not-found-card {
+    text-align: center;
+    padding: 48px 32px;
+}
+
+.not-found-code {
+    font-size: 8rem;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: -8px;
+
+    color: #5a9289;
+
+    margin-bottom: 18px;
+}
+
+.not-found-card h1 {
+    margin: 0 0 10px;
+
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.not-found-card p {
+    margin: 0 0 28px;
+
+    color: #71817c;
+    font-size: 0.95rem;
+}
+
+.not-found-link {
+    display: inline-block;
+
+    padding: 9px 16px;
+
+    border: 1px solid #cbdad5;
+    border-radius: 8px;
+
+    color: #4f8177;
+    text-decoration: none;
+
+    font-size: 0.9rem;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.not-found-link:hover {
+    background: #eef6f3;
+    border-color: #a9c6bd;
+}

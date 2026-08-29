@@ -2,6 +2,7 @@ import {
     BrowserRouter,
     Routes,
     Route,
+    Navigate,
 } from "react-router-dom";
 
 import Login from "./pages/login";
@@ -13,8 +14,9 @@ import Live from "./pages/Live";
 import Chat from "./pages/Chat";
 import Alerts from "./pages/Alerts";
 import Usage from "./pages/Usage";
-
+import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedLayout from "./components/ProtectedLayout";
 
 
 function App() {
@@ -26,7 +28,10 @@ function App() {
                 {/* =========================
                     PUBLIC ROUTES
                 ========================= */}
-
+                <Route
+                    path="/"
+                    element={<Navigate to="/dashboard" replace />}
+                />
                 <Route
                     path="/auth/login"
                     element={<Login />}
@@ -42,44 +47,48 @@ function App() {
                     PROTECTED ROUTES
                 ========================= */}
 
-<Route element={<ProtectedRoute />}>
+                <Route element={<ProtectedRoute />}>
 
-    <Route
-        path="/dashboard"
-        element={<Dashboard />}
-    />
+                    <Route element={<ProtectedLayout />}>
 
-    <Route
-        path="/api-keys"
-        element={<APIKeys />}
-    />
+                        <Route
+                            path="/dashboard"
+                            element={<Dashboard />}
+                        />
 
-    <Route
-        path="/analytics"
-        element={<Analytics />}
-    />
+                        <Route
+                            path="/api-keys"
+                            element={<APIKeys />}
+                        />
 
-    <Route
-        path="/live"
-        element={<Live />}
-    />
+                        <Route
+                            path="/analytics"
+                            element={<Analytics />}
+                        />
 
-    <Route
-        path="/chat"
-        element={<Chat />}
-    />
+                        <Route
+                            path="/live"
+                            element={<Live />}
+                        />
 
-    <Route
-        path="/alerts"
-        element={<Alerts />}
-    />
+                        <Route
+                            path="/chat"
+                            element={<Chat />}
+                        />
 
-    <Route
-        path="/usage"
-        element={<Usage />}
-    />
+                        <Route
+                            path="/alerts"
+                            element={<Alerts />}
+                        />
 
-</Route>
+                        <Route
+                            path="/usage"
+                            element={<Usage />}
+                        />
+
+                    </Route>
+
+                </Route>
 
 
                 {/* =========================
@@ -88,12 +97,7 @@ function App() {
 
                 <Route
                     path="*"
-                    element={
-                        <div>
-                            <h1>404</h1>
-                            <p>Page not found.</p>
-                        </div>
-                    }
+                    element={<NotFound />}
                 />
 
             </Routes>
