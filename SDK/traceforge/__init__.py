@@ -2,7 +2,7 @@ from traceforge.config import configure
 from traceforge.patcher import Patcher
 from traceforge.recorder import Recorder
 from traceforge.transport import HTTPTransport
-
+from traceforge.integrations.groq import GroqIntegration
 
 _initialized = False
 _recorder = None
@@ -56,3 +56,31 @@ def instrument_gemini(
         patcher,
         client,
     )
+
+
+
+
+def instrument_groq(
+    client,
+):
+
+    if not _initialized:
+        raise RuntimeError(
+            "Call traceforge.init() first."
+        )
+
+    integration = GroqIntegration()
+
+    patcher = Patcher(
+        integration=integration,
+        recorder=_recorder,
+    )
+
+    integration.install(
+        patcher,
+        client,
+    )
+
+async def flush():
+    if _recorder is not None:
+        await _recorder.flush()

@@ -2,18 +2,18 @@ import asyncio
 from google import genai
 import traceforge
 import dotenv
-
+import os
 dotenv.load_dotenv()
 
 async def main():
 
     traceforge.init(
-        api_key=dotenv.getenv("TEST_API_KEY"),
+        api_key=os.getenv("TEST_API_KEY"),
         endpoint="http://localhost:8000",
     )
 
     client = genai.Client(
-        api_key=dotenv.getenv("TEST_GEMINI"),
+        api_key=os.getenv("TEST_GEMINI"),
     )
 
     traceforge.instrument_gemini(
