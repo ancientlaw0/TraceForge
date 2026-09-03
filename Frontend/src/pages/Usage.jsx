@@ -8,6 +8,8 @@ import {
 
 import "../css/usage.css";
 
+import { getErrorMessage } from "../utils/errors";
+
 
 const DEFAULT_FORM = {
     enabled: true,
@@ -1391,105 +1393,6 @@ function getFieldLabel(field) {
     return (
         labels[field] ||
         field
-    );
-}
-
-
-function getErrorMessage(error) {
-
-    if (
-        error?.response
-    ) {
-
-        const status =
-            error.response.status;
-
-
-        if (status === 401) {
-
-            return (
-                "Your session has expired. Please log in again."
-            );
-        }
-
-
-        if (status === 403) {
-
-            return (
-                "You are not authorized to manage usage limits."
-            );
-        }
-
-
-        if (status === 404) {
-
-            return (
-                "Usage limits were not found."
-            );
-        }
-
-
-        if (status === 409) {
-
-            return (
-                "The usage limit configuration conflicts with the current configuration."
-            );
-        }
-
-
-        if (status === 422) {
-
-            const detail =
-                error.response.data?.detail;
-
-
-            if (
-                Array.isArray(detail)
-            ) {
-
-                return detail
-                    .map(
-                        (item) =>
-                            item.msg
-                    )
-                    .join(", ");
-            }
-
-
-            return (
-                detail ||
-                "Some usage limit values are invalid."
-            );
-        }
-
-
-        if (status >= 500) {
-
-            return (
-                "TraceForge encountered a server error. Please try again later."
-            );
-        }
-
-
-        return (
-            error.response.data?.detail ||
-            "Unable to update usage limits."
-        );
-    }
-
-
-    if (
-        error?.request
-    ) {
-
-        return (
-            "Unable to connect to the TraceForge server."
-        );
-    }
-
-
-    return (
-        "Something went wrong. Please try again."
     );
 }
 

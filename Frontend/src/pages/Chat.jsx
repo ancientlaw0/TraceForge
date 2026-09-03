@@ -2,7 +2,7 @@ import { useState } from "react";
 import { sendMessage } from "../api/chat";
 import "../css/chat.css";
 
-
+import ReactMarkdown from "react-markdown";
 function Chat() {
 
     const [message, setMessage] = useState("");
@@ -199,10 +199,14 @@ function Chat() {
                                 }
                             >
 
-                                <div
-                                    className="chat-bubble"
-                                >
-                                    {item.content}
+                                <div className="chat-bubble">
+                                    {item.role === "assistant" ? (
+                                        <ReactMarkdown>
+                                            {item.content}
+                                        </ReactMarkdown>
+                                    ) : (
+                                        item.content
+                                    )}
                                 </div>
 
                             </div>

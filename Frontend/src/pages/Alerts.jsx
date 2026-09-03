@@ -8,7 +8,7 @@ import {
 } from "../api/alerts";
 
 import "../css/alerts.css";
-
+import { getErrorMessage } from "../utils/errors";
 
 const METRICS = [
     {
@@ -1510,103 +1510,7 @@ function formatThreshold(
 }
 
 
-function getErrorMessage(error) {
 
-    if (
-        error?.response
-    ) {
-
-        const status =
-            error.response.status;
-
-
-        if (status === 401) {
-
-            return (
-                "Your session has expired. Please log in again."
-            );
-        }
-
-
-        if (status === 403) {
-
-            return (
-                "You are not authorized to manage alerts."
-            );
-        }
-
-
-        if (status === 404) {
-
-            return (
-                "The alert could not be found. It may have already been deleted."
-            );
-        }
-
-
-        if (status === 409) {
-
-            return (
-                "This alert conflicts with an existing configuration."
-            );
-        }
-
-
-        if (status === 422) {
-
-            const detail =
-                error.response.data?.detail;
-
-
-            if (
-                Array.isArray(detail)
-            ) {
-
-                return detail
-                    .map(
-                        (item) =>
-                            item.msg
-                    )
-                    .join(", ");
-            }
-
-
-            return (
-                detail ||
-                "Some alert values are invalid."
-            );
-        }
-
-
-        if (status >= 500) {
-
-            return (
-                "TraceForge encountered a server error. Please try again later."
-            );
-        }
-
-
-        return (
-            error.response.data?.detail ||
-            "Unable to complete the alert operation."
-        );
-    }
-
-
-    if (
-        error?.request
-    ) {
-
-        return (
-            "Unable to connect to the TraceForge server."
-        );
-    }
-
-
-    return (
-        "Something went wrong. Please try again."
-    );
-}
 
 
 export default Alerts;

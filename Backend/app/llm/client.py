@@ -1,17 +1,16 @@
-from openai import OpenAI
+from groq import AsyncGroq
 from app.core.config import settings
+
 
 class LLMClient:
     def __init__(self):
-        self.client = OpenAI(
-            base_url="https://integrate.api.nvidia.com/v1",
+        self.client = AsyncGroq(
             api_key=settings.NVIDIA_API_KEY,
         )
 
-        # Change this later if you want another model
         self.model = settings.LLM_MODEL
 
-    def generate(
+    async def generate(
         self,
         system_prompt: str,
         user_prompt: str,
@@ -19,7 +18,7 @@ class LLMClient:
         max_tokens: int = 1024,
     ) -> str:
 
-        response = self.client.chat.completions.create(
+        response = await self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {

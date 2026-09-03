@@ -1,6 +1,8 @@
 from typing import Any
 from importlib import import_module
+
 from traceforge.integrations.base import ProviderIntegration
+
 
 class GeminiIntegration(ProviderIntegration):
 
@@ -127,11 +129,39 @@ class GeminiIntegration(ProviderIntegration):
     ) -> float:
 
         pricing = {
-# placeholder for Gemini pricing
-            "gemini-2.0-flash": {
-                "input": 0.10,
-                "output": 0.40,
+
+            # Gemini 3.6 Flash
+            "gemini-3.6-flash": {
+                "input": 0.75,
+                "output": 3.75,
             },
+
+            # Gemini 3.5 Flash-Lite
+            "gemini-3.5-flash-lite": {
+                "input": 0.30,
+                "output": 2.50,
+            },
+
+            # Gemini 3.1 Flash-Lite
+            "gemini-3.1-flash-lite": {
+                "input": 0.25,
+                "output": 1.50,
+            },
+
+            # Gemini 3.1 Flash Live Preview
+            # Text pricing
+            "gemini-3.1-flash-live-preview": {
+                "input": 0.75,
+                "output": 4.50,
+            },
+
+            # Gemini 2.5 Flash Native Audio
+            # Text input / text output
+            "gemini-2.5-flash-native-audio-preview-12-2025": {
+                "input": 0.50,
+                "output": 2.00,
+            },
+
         }
 
         model_pricing = pricing.get(
@@ -166,6 +196,7 @@ class GeminiIntegration(ProviderIntegration):
         client_module = import_module(
             "google.genai.client"
         )
+
         async_client = getattr(
             client_module,
             "AsyncClient",
@@ -181,7 +212,6 @@ class GeminiIntegration(ProviderIntegration):
             models_class,
             "generate_content",
         )
-
 
     def install(
         self,

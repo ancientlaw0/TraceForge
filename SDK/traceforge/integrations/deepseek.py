@@ -1,11 +1,14 @@
 from typing import Any
 from importlib import import_module
+
 from traceforge.integrations.base import ProviderIntegration
-class OpenAIIntegration(ProviderIntegration):
+
+
+class DeepSeekIntegration(ProviderIntegration):
 
     @property
     def provider(self) -> str:
-        return "openai"
+        return "deepseek"
 
     def extract_request(
         self,
@@ -41,42 +44,35 @@ class OpenAIIntegration(ProviderIntegration):
             )
 
             if isinstance(content, str):
-
                 prompt_parts.append(
                     f"{role}: {content}"
                 )
 
             else:
-
                 prompt_parts.append(
                     f"{role}: {str(content)}"
                 )
 
-        prompt = "\n".join(
-            prompt_parts
-        )
+        prompt = "\n".join(prompt_parts)
 
         return model, prompt
 
     def extract_response(
         self,
         response: Any,
-    ) -> tuple[
-        str,
-        int,
-        int,
-        dict[str, Any],
-    ]:
+    ) -> tuple[str, int, int, dict[str, Any]]:
 
         response_text = ""
 
-        if getattr(
+        choices = getattr(
             response,
             "choices",
-            None,
-        ):
+            [],
+        )
 
-            choice = response.choices[0]
+        if choices:
+
+            choice = choices[0]
 
             message = getattr(
                 choice,
@@ -93,9 +89,7 @@ class OpenAIIntegration(ProviderIntegration):
                 )
 
                 if content is not None:
-                    response_text = str(
-                        content
-                    )
+                    response_text = str(content)
 
         usage = getattr(
             response,
@@ -103,31 +97,26 @@ class OpenAIIntegration(ProviderIntegration):
             None,
         )
 
-        input_tokens = 0
-        output_tokens = 0
-
-        if usage is not None:
-
-            input_tokens = int(
-                getattr(
-                    usage,
-                    "prompt_tokens",
-                    0,
-                )
-                or 0
+        input_tokens = int(
+            getattr(
+                usage,
+                "prompt_tokens",
+                0,
             )
+            or 0
+        )
 
-            output_tokens = int(
-                getattr(
-                    usage,
-                    "completion_tokens",
-                    0,
-                )
-                or 0
+        output_tokens = int(
+            getattr(
+                usage,
+                "completion_tokens",
+                0,
             )
+            or 0
+        )
 
         metadata = {
-            "integration": "openai",
+            "integration": "deepseek",
             "response_id": getattr(
                 response,
                 "id",
@@ -135,15 +124,11 @@ class OpenAIIntegration(ProviderIntegration):
             ),
             "finish_reason": (
                 getattr(
-                    response.choices[0],
+                    choices[0],
                     "finish_reason",
                     None,
                 )
-                if getattr(
-                    response,
-                    "choices",
-                    None,
-                )
+                if choices
                 else None
             ),
         }
@@ -162,74 +147,54 @@ class OpenAIIntegration(ProviderIntegration):
         output_tokens: int,
     ) -> float:
 
+        # USD per 1M tokens.
         pricing = {
-            # GPT-4o
-            "gpt-4o": {
-                "input": 2.50,
-                "output": 10.00,
+            "deepseek-v4-flash": {
+                "input": 0.22,
+                "output": 0.66,
             },
-
-            # GPT-4.1
-            "gpt-4.1": {
-                "input": 2.00,
-                "output": 8.00,
+            "deepseek-v4-pro": {
+                "input": 0.66,
+                "output": 1.98,
             },
-
-            # GPT-4.1 Mini
-            "gpt-4.1-mini": {
-                "input": 0.40,
-                "output": 1.60,
-            },
-
-            # GPT-4.1 Nano
-            "gpt-4.1-nano": {
-                "input": 0.10,
-                "output": 0.40,
-            },
-
-            # GPT-4o Mini
-            "gpt-4o-mini": {
-                "input": 0.15,
-                "output": 0.60,
+            "deepseek-v4-flash-vision-exp": {
+                "input": 0.22,
+                "output": 0.66,
             },
         }
 
-        model_pricing = pricing.get(
-            model
-        )
+        model_pricing = pricing.get(model)
 
         if model_pricing is None:
             return 0.0
 
         input_cost = (
-            input_tokens / 1_000_000
-        ) * model_pricing["input"]
+            input_tokens
+            / 1_000_000
+            * model_pricing["input"]
+        )
 
         output_cost = (
-            output_tokens / 1_000_000
-        ) * model_pricing["output"]
-
-        return round(
-            input_cost + output_cost,
-            6,
+            output_tokens
+            / 1_000_000
+            * model_pricing["output"]
         )
+
+        return input_cost + output_cost
 
     def extract_error(
         self,
         error: Exception,
     ) -> str:
-
         return str(error)
 
     def patch_target(self):
-        completions = getattr(
-            import_module(
-                "openai.resources.chat.completions"
-            ),
-            "Completions",
+
+        resources = import_module(
+            "openai.resources.chat.completions"
         )
 
         return (
-            completions,
+            resources.AsyncCompletions,
             "create",
         )

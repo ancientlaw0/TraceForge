@@ -1,66 +1,32 @@
 /* =========================================================
-   GLOBAL APPLICATION LAYOUT
-========================================================= */
-
-:root {
-    --sidebar-expanded: 220px;
-    --sidebar-collapsed: 68px;
-}
-
-
-/* =========================================================
-   APP SHELL
-========================================================= */
-
-.app-shell {
-    --current-sidebar-width: var(--sidebar-expanded);
-
-    min-height: 100vh;
-
-    transition:
-        --current-sidebar-width 180ms ease;
-}
-
-
-/* =========================================================
    SIDEBAR
 ========================================================= */
 
-.app-sidebar {
-
+.dashboard-sidebar {
     position: fixed;
 
     top: 0;
     left: 0;
     bottom: 0;
 
-    width: var(--current-sidebar-width);
+    width: 220px;
 
     box-sizing: border-box;
 
     display: flex;
     flex-direction: column;
 
-    padding: 30px 12px 20px;
+    padding: 30px 16px 20px;
 
     background: var(--color-primary);
     color: var(--color-bg);
 
     z-index: 1000;
 
-    overflow: visible;
-
     transition:
         width 180ms ease;
-}
 
-
-/* =========================================================
-   COLLAPSED STATE
-========================================================= */
-
-.sidebar-collapsed {
-    --current-sidebar-width: var(--sidebar-collapsed);
+    overflow: visible;
 }
 
 
@@ -69,48 +35,26 @@
 ========================================================= */
 
 .sidebar-brand {
+    height: 30px;
 
-    height: 34px;
-
-    padding: 0 10px 34px;
-
-    display: flex;
-    align-items: center;
+    padding: 0 12px 34px;
 
     color: var(--color-bg);
 
     font-family: var(--font-display);
 
     font-size: 25px;
+
     font-weight: 600;
+
+    line-height: 1.2;
 
     white-space: nowrap;
 
     overflow: hidden;
-}
-
-
-.brand-full {
-    opacity: 1;
 
     transition:
         opacity 120ms ease;
-}
-
-
-.brand-short {
-    display: none;
-}
-
-
-/* Collapsed logo */
-
-.sidebar-collapsed .brand-full {
-    display: none;
-}
-
-.sidebar-collapsed .brand-short {
-    display: block;
 }
 
 
@@ -119,20 +63,17 @@
 ========================================================= */
 
 .sidebar-toggle {
-
     position: absolute;
 
-    top: 18px;
-    right: -13px;
+    top: 80px;
+    right: -16px;
 
-    width: 26px;
-    height: 26px;
+    width: 32px;
+    height: 32px;
 
     display: flex;
     align-items: center;
     justify-content: center;
-
-    padding: 0;
 
     border: 1px solid var(--color-border);
 
@@ -142,26 +83,13 @@
 
     color: var(--color-primary);
 
-    font-family: var(--font-mono);
-
-    font-size: 18px;
-    line-height: 1;
-
     cursor: pointer;
 
-    box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.08);
+    font-size: 22px;
+
+    line-height: 1;
 
     z-index: 1100;
-
-    transition:
-        background 120ms ease,
-        transform 120ms ease;
-}
-
-
-.sidebar-toggle:hover {
-    transform: scale(1.05);
 }
 
 
@@ -170,13 +98,11 @@
 ========================================================= */
 
 .sidebar-nav {
-
     display: flex;
+
     flex-direction: column;
 
     gap: 25px;
-
-    width: 100%;
 }
 
 
@@ -185,8 +111,8 @@
 ========================================================= */
 
 .nav-section {
-
     display: flex;
+
     flex-direction: column;
 
     gap: 3px;
@@ -194,10 +120,10 @@
 
 
 .nav-section-label {
-
     margin: 0 12px 7px;
 
-    color: rgba(246, 245, 240, 0.52);
+    color:
+        rgba(246, 245, 240, 0.52);
 
     font-family: var(--font-mono);
 
@@ -208,20 +134,6 @@
     text-transform: uppercase;
 
     white-space: nowrap;
-
-    overflow: hidden;
-
-    transition:
-        opacity 120ms ease;
-}
-
-
-/* Hide section labels when collapsed */
-
-.sidebar-collapsed .nav-section-label {
-    opacity: 0;
-    height: 0;
-    margin: 0;
 }
 
 
@@ -230,8 +142,8 @@
 ========================================================= */
 
 .nav-item {
-
     display: flex;
+
     align-items: center;
 
     gap: 10px;
@@ -244,25 +156,20 @@
 
     box-sizing: border-box;
 
-    color: rgba(246, 245, 240, 0.72);
+    color:
+        rgba(246, 245, 240, 0.72);
 
     font-size: 13px;
 
     text-decoration: none;
 
-    white-space: nowrap;
-
-    overflow: hidden;
-
     transition:
         background 120ms ease,
-        color 120ms ease,
-        padding 180ms ease;
+        color 120ms ease;
 }
 
 
 .nav-item:hover {
-
     background:
         rgba(246, 245, 240, 0.08);
 
@@ -272,7 +179,6 @@
 
 
 .nav-item-active {
-
     background:
         rgba(246, 245, 240, 0.12);
 
@@ -286,9 +192,9 @@
 ========================================================= */
 
 .nav-icon {
+    flex: 0 0 17px;
 
     width: 17px;
-    min-width: 17px;
 
     font-family: var(--font-mono);
 
@@ -299,7 +205,6 @@
 
 
 .live-icon {
-
     color: #9BBEAA;
 
     font-size: 9px;
@@ -311,45 +216,86 @@
 ========================================================= */
 
 .nav-label {
-
-    opacity: 1;
+    white-space: nowrap;
 
     transition:
-        opacity 100ms ease;
+        opacity 120ms ease;
 }
 
 
 /* =========================================================
-   COLLAPSED NAV
+   LOGOUT
 ========================================================= */
 
-.sidebar-collapsed .nav-item {
-
-    justify-content: center;
-
-    gap: 0;
-
-    padding-left: 0;
-    padding-right: 0;
+.sidebar-bottom {
+    margin-top: auto;
 }
 
 
-.sidebar-collapsed .nav-label {
+.logout-item {
+    width: 100%;
 
+    border: none;
+
+    background: transparent;
+
+    cursor: pointer;
+
+    font-family: inherit;
+
+    text-align: left;
+
+    color: rgb(234, 5, 5);
+}
+
+
+.logout-item:hover {
+    background:
+        rgba(226, 9, 9, 0.878);
+
+    color: var(--color-bg);
+}
+
+
+/* =========================================================
+   COLLAPSED
+========================================================= */
+
+.sidebar-collapsed .dashboard-sidebar {
+    width: 68px;
+}
+
+
+.sidebar-collapsed .sidebar-brand {
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+
+.sidebar-collapsed .nav-section-label {
     display: none;
 }
 
 
-/* =========================================================
-   PAGE CONTENT
-========================================================= */
+.sidebar-collapsed .nav-item {
+    justify-content: center;
 
-.app-content {
+    padding-left: 8px;
+    padding-right: 8px;
+}
 
-    min-height: 100vh;
 
-    margin-left: var(--current-sidebar-width);
+.sidebar-collapsed .nav-icon {
+    margin: 0;
+}
 
-    transition:
-        margin-left 180ms ease;
+
+.sidebar-collapsed .nav-label {
+    display: none;
+}
+
+
+.sidebar-collapsed .sidebar-nav {
+    gap: 25px;
 }

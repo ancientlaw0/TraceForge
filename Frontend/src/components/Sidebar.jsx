@@ -1,57 +1,37 @@
 import { NavLink } from "react-router-dom";
+import { logout } from "../api/auth";
 
 import "../css/Sidebar.css";
 
 function Sidebar({ collapsed, onToggle }) {
-
     const navClass = ({ isActive }) =>
         `nav-item ${isActive ? "nav-item-active" : ""}`;
-
 
     return (
         <aside
             className={`dashboard-sidebar ${
-                collapsed
-                    ? "sidebar-collapsed"
-                    : ""
+                collapsed ? "sidebar-collapsed" : ""
             }`}
         >
-
-            <div className="sidebar-header">
-
-                <div className="sidebar-brand">
-
-                    <span className="brand-mark">
-                        TF
-                    </span>
-
-                    <span className="brand-text">
-                        TraceForge
-                    </span>
-
-                </div>
-
-
-                <button
-                    type="button"
-                    className="sidebar-toggle"
-                    onClick={onToggle}
-                    title={
-                        collapsed
-                            ? "Expand sidebar"
-                            : "Collapse sidebar"
-                    }
-                >
-                    {collapsed ? "›" : "‹"}
-                </button>
-
+            <div className="sidebar-brand">
+                TraceForge
             </div>
 
+            <button
+                type="button"
+                className="sidebar-toggle"
+                onClick={onToggle}
+                title={
+                    collapsed
+                        ? "Expand sidebar"
+                        : "Collapse sidebar"
+                }
+            >
+                {collapsed ? "›" : "‹"}
+            </button>
 
             <nav className="sidebar-nav">
-
                 <div className="nav-section">
-
                     <NavLink
                         to="/dashboard"
                         className={navClass}
@@ -65,16 +45,12 @@ function Sidebar({ collapsed, onToggle }) {
                             Overview
                         </span>
                     </NavLink>
-
                 </div>
 
-
                 <div className="nav-section">
-
                     <p className="nav-section-label">
                         Observability
                     </p>
-
 
                     <NavLink
                         to="/analytics"
@@ -90,7 +66,6 @@ function Sidebar({ collapsed, onToggle }) {
                         </span>
                     </NavLink>
 
-
                     <NavLink
                         to="/live"
                         className={navClass}
@@ -105,15 +80,26 @@ function Sidebar({ collapsed, onToggle }) {
                         </span>
                     </NavLink>
 
+                    {/* Added Chat only */}
+                    <NavLink
+                        to="/chat"
+                        className={navClass}
+                        title="Chat"
+                    >
+                        <span className="nav-icon">
+                            ☏
+                        </span>
+
+                        <span className="nav-label">
+                            Chat
+                        </span>
+                    </NavLink>
                 </div>
 
-
                 <div className="nav-section">
-
                     <p className="nav-section-label">
                         Management
                     </p>
-
 
                     <NavLink
                         to="/alerts"
@@ -129,7 +115,6 @@ function Sidebar({ collapsed, onToggle }) {
                         </span>
                     </NavLink>
 
-
                     <NavLink
                         to="/api-keys"
                         className={navClass}
@@ -144,7 +129,6 @@ function Sidebar({ collapsed, onToggle }) {
                         </span>
                     </NavLink>
 
-
                     <NavLink
                         to="/usage"
                         className={navClass}
@@ -158,30 +142,28 @@ function Sidebar({ collapsed, onToggle }) {
                             Usage
                         </span>
                     </NavLink>
-
                 </div>
 
+                <div className="sidebar-bottom">
+                    <button
+                        type="button"
+                        className="nav-item logout-item"
+                        onClick={() => {
+                            logout();
+                            window.location.href =
+                                "/auth/login";
+                        }}
+                    >
+                        <span className="nav-icon">
+                            ↪
+                        </span>
+
+                        <span className="nav-label">
+                            Logout
+                        </span>
+                    </button>
+                </div>
             </nav>
-
-
-            <div className="sidebar-bottom">
-
-                <NavLink
-                    to="/settings"
-                    className={navClass}
-                    title="Settings"
-                >
-                    <span className="nav-icon">
-                        ⚙
-                    </span>
-
-                    <span className="nav-label">
-                        Settings
-                    </span>
-                </NavLink>
-
-            </div>
-
         </aside>
     );
 }

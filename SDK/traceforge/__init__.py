@@ -81,6 +81,60 @@ def instrument_groq(
         client,
     )
 
+def instrument_ollama(client):
+    if not _initialized:
+        raise RuntimeError("Call traceforge.init() first.")
+
+    from traceforge.integrations.ollama import OllamaIntegration
+
+    integration = OllamaIntegration()
+
+    patcher = Patcher(
+        integration=integration,
+        recorder=_recorder,
+    )
+
+    integration.install(patcher, client)
+
+def instrument_anthropic(client):
+    if not _initialized:
+        raise RuntimeError( "Call traceforge.init() first." )
+    from traceforge.integrations.anthropic import (
+        AnthropicIntegration,
+    )
+
+    integration = AnthropicIntegration()
+
+    patcher = Patcher(
+        integration=integration,
+        recorder=_recorder,
+    )
+
+    integration.install(
+        patcher,
+        client,
+    )
+
+def instrument_deepseek(client):
+    if not _initialized:
+        raise RuntimeError( "Call traceforge.init() first." )
+
+    from traceforge.integrations.deepseek import (
+        DeepSeekIntegration,
+    )
+
+    integration = DeepSeekIntegration()
+
+    patcher = Patcher(
+        integration=integration,
+        recorder=_recorder,
+    )
+
+    integration.install(
+        patcher,
+        client,
+    )
+
 async def flush():
     if _recorder is not None:
         await _recorder.flush()

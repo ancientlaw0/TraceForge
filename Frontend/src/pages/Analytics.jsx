@@ -1,15 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import "../css/analytics.css";
-
-import {
-    getOverview,
-    getModels,
-    getProviders,
-    getTimeseries,
-    getErrors,
-    getTraces,
-} from "../api/analytics";
 
 import {
     ResponsiveContainer,
@@ -25,6 +14,20 @@ import {
     Cell,
 } from "recharts";
 
+import useAnalytics from "../hooks/useAnalytics";
+
+import {
+    formatNumber,
+    formatCost,
+    formatLatency,
+    formatTimestamp,
+} from "../utils/formatters";
+
+import FilterField from "../components/analytics/FilterField";
+import MetricCard from "../components/analytics/MetricCard";
+import ChartCard from "../components/analytics/ChartCard";
+import TraceExplorer from "../components/analytics/TraceExplorer";
+
 
 const CHART = {
     primary: "#315f50",
@@ -35,306 +38,36 @@ const CHART = {
     grid: "#deddd6",
 };
 
+const tooltipStyle = {
+    background: "#ffffff",
+    border: "1px solid #deddd6",
+    borderRadius: "8px",
+    boxShadow:
+        "0 8px 24px rgba(15, 23, 42, 0.08)",
+    fontSize: "12px",
+};
 
 function Analytics() {
-    const [filters, setFilters] = useState({
-        time: "week",
-        provider: "",
-        model: "",
-        status: "",
-        start: "",
-        end: "",
-    });
+    const {
+        filters,
+        overview,
+        models,
+        providers,
+        timeseries,
+        errors,
+        traces,
 
-    const [overview, setOverview] = useState(null);
-    const [models, setModels] = useState([]);
-    const [providers, setProviders] = useState([]);
-    const [timeseries, setTimeseries] = useState([]);
-    const [errors, setErrors] = useState([]);
-    const [traces, setTraces] = useState([]);
+        providerCatalog,
+        availableModels,
 
-    // Unfiltered catalogs for the dropdowns.
-    const [providerCatalog, setProviderCatalog] = useState([]);
-    const [modelCatalog, setModelCatalog] = useState([]);
+        loading,
+        refreshing,
+        errorsBySection,
 
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [errorsBySection, setErrorsBySection] = useState({});
-
-
-    /*
-     * ---------------------------------------------------------
-     * LOAD ANALYTICS
-     * ---------------------------------------------------------
-     */
-
-    const loadAnalytics = async () => {
-        setRefreshing(true);
-
-        const requests = [
-            {
-                name: "overview",
-                request: getOverview(filters),
-            },
-            {
-                name: "models",
-                request: getModels(filters),
-            },
-            {
-                name: "providers",
-                request: getProviders(filters),
-            },
-            {
-                name: "timeseries",
-                request: getTimeseries(filters),
-            },
-            {
-                name: "errors",
-                request: getErrors(filters),
-            },
-            {
-                name: "traces",
-                request: getTraces(filters),
-            },
-        ];
-
-        const results = await Promise.allSettled(
-            requests.map((item) => item.request)
-        );
-
-        const sectionErrors = {};
-
-        results.forEach((result, index) => {
-            const section = requests[index].name;
-
-            if (result.status === "fulfilled") {
-                const value = result.value;
-
-                switch (section) {
-                    case "overview":
-                        setOverview(value);
-                        break;
-
-                    case "models": {
-                        const data = Array.isArray(value)
-                            ? value
-                            : [];
-
-                        setModels(data);
-
-                        /*
-                         * Only populate the catalog from the first
-                         * unfiltered dataset. This prevents selecting
-                         * "anthropic" from making Google models
-                         * disappear from the dropdown forever.
-                         */
-                        if (
-                            !filters.provider &&
-                            !filters.model &&
-                            !providerCatalog.length
-                        ) {
-                            const uniqueProviders = [
-                                ...new Set(
-                                    data
-                                        .map((item) => item.provider)
-                                        .filter(Boolean)
-                                ),
-                            ];
-
-                            const uniqueModels = data
-                                .filter(
-                                    (item) =>
-                                        item.provider &&
-                                        item.model
-                                )
-                                .map((item) => ({
-                                    provider: item.provider,
-                                    model: item.model,
-                                }));
-
-                            setProviderCatalog(uniqueProviders);
-                            setModelCatalog(uniqueModels);
-                        }
-
-                        break;
-                    }
-
-                    case "providers": {
-                        const data = Array.isArray(value)
-                            ? value
-                            : [];
-
-                        setProviders(data);
-
-                        /*
-                         * Fallback catalog from providers endpoint.
-                         */
-                        if (
-                            !filters.provider &&
-                            !providerCatalog.length
-                        ) {
-                            setProviderCatalog(
-                                data
-                                    .map(
-                                        (item) =>
-                                            item.provider
-                                    )
-                                    .filter(Boolean)
-                            );
-                        }
-
-                        break;
-                    }
-
-                    case "timeseries":
-                        setTimeseries(
-                            Array.isArray(value)
-                                ? value
-                                : []
-                        );
-                        break;
-
-                    case "errors":
-                        setErrors(
-                            Array.isArray(value)
-                                ? value
-                                : []
-                        );
-                        break;
-
-                    case "traces":
-                        setTraces(
-                            Array.isArray(value)
-                                ? value
-                                : []
-                        );
-                        break;
-
-                    default:
-                        break;
-                }
-            } else {
-                sectionErrors[section] =
-                    getErrorMessage(result.reason);
-            }
-        });
-
-        setErrorsBySection(sectionErrors);
-        setLoading(false);
-        setRefreshing(false);
-    };
-
-
-    useEffect(() => {
-        loadAnalytics();
-    }, []);
-
-
-    /*
-     * ---------------------------------------------------------
-     * FILTER OPTIONS
-     * ---------------------------------------------------------
-     */
-
-    const availableModels = useMemo(() => {
-        if (!filters.provider) {
-            return modelCatalog;
-        }
-
-        return modelCatalog.filter(
-            (item) =>
-                item.provider === filters.provider
-        );
-    }, [
-        filters.provider,
-        modelCatalog,
-    ]);
-
-
-    /*
-     * ---------------------------------------------------------
-     * FILTER HANDLERS
-     * ---------------------------------------------------------
-     */
-
-    const handleFilterChange = (event) => {
-        const { name, value } = event.target;
-
-        setFilters((previous) => {
-            const next = {
-                ...previous,
-                [name]: value,
-            };
-
-            /*
-             * If provider changes, make sure the selected model
-             * actually belongs to that provider.
-             */
-            if (name === "provider") {
-                if (
-                    value &&
-                    previous.model &&
-                    !modelCatalog.some(
-                        (item) =>
-                            item.provider === value &&
-                            item.model === previous.model
-                    )
-                ) {
-                    next.model = "";
-                }
-            }
-
-            /*
-             * Leaving custom mode clears its dates.
-             */
-            if (
-                name === "time" &&
-                value !== "custom"
-            ) {
-                next.start = "";
-                next.end = "";
-            }
-
-            return next;
-        });
-    };
-
-
-    const handleApplyFilters = () => {
-        if (
-            filters.time === "custom" &&
-            (!filters.start || !filters.end)
-        ) {
-            setErrorsBySection({
-                filters:
-                    "Please select both start and end dates.",
-            });
-
-            return;
-        }
-
-        if (
-            filters.time === "custom" &&
-            new Date(filters.start) >=
-                new Date(filters.end)
-        ) {
-            setErrorsBySection({
-                filters:
-                    "Start date must be before end date.",
-            });
-
-            return;
-        }
-
-        loadAnalytics();
-    };
-
-
-    /*
-     * ---------------------------------------------------------
-     * DATA
-     * ---------------------------------------------------------
-     */
+        loadAnalytics,
+        handleFilterChange,
+        handleApplyFilters,
+    } = useAnalytics();
 
     const summary = overview?.summary;
     const latency = overview?.latency;
@@ -342,9 +75,10 @@ function Analytics() {
     const formattedTimeseries =
         timeseries.map((item) => ({
             ...item,
-            time: formatTimestamp(item.timestamp),
+            time: formatTimestamp(
+                item.timestamp
+            ),
         }));
-
 
     const latencyData = latency
         ? [
@@ -375,18 +109,12 @@ function Analytics() {
           ]
         : [];
 
-
-    /*
-     * ---------------------------------------------------------
-     * LOADING
-     * ---------------------------------------------------------
-     */
-
     if (loading) {
         return (
             <div className="analytics-page">
                 <div className="analytics-loading">
                     <div className="loading-spinner" />
+
                     <span>
                         Loading analytics...
                     </span>
@@ -395,22 +123,12 @@ function Analytics() {
         );
     }
 
-
-    /*
-     * ---------------------------------------------------------
-     * PAGE
-     * ---------------------------------------------------------
-     */
-
     return (
         <div className="analytics-page">
 
-            {/* =================================================
-                HEADER
-            ================================================= */}
+            {/* HEADER */}
 
             <header className="analytics-header">
-
                 <div>
                     <div className="analytics-eyebrow">
                         OBSERVABILITY
@@ -443,19 +161,15 @@ function Analytics() {
                         ? "Refreshing"
                         : "Refresh"}
                 </button>
-
             </header>
 
-
-            {/* =================================================
-                FILTERS
-            ================================================= */}
+            {/* FILTERS */}
 
             <section className="filters-card">
-
                 <div className="section-heading">
                     <div>
                         <h2>Filters</h2>
+
                         <p>
                             Narrow analytics to the
                             traffic you want to inspect.
@@ -463,10 +177,7 @@ function Analytics() {
                     </div>
                 </div>
 
-
                 <div className="filter-grid">
-
-                    {/* TIME */}
 
                     <FilterField label="Time">
                         <select
@@ -498,9 +209,6 @@ function Analytics() {
                         </select>
                     </FilterField>
 
-
-                    {/* PROVIDER */}
-
                     <FilterField label="Provider">
                         <select
                             name="provider"
@@ -526,9 +234,6 @@ function Analytics() {
                         </select>
                     </FilterField>
 
-
-                    {/* MODEL */}
-
                     <FilterField label="Model">
                         <select
                             name="model"
@@ -553,9 +258,6 @@ function Analytics() {
                             )}
                         </select>
                     </FilterField>
-
-
-                    {/* STATUS */}
 
                     <FilterField label="Status">
                         <select
@@ -585,10 +287,8 @@ function Analytics() {
 
                 </div>
 
-
                 {filters.time === "custom" && (
                     <div className="custom-date-grid">
-
                         <FilterField label="Start">
                             <input
                                 type="datetime-local"
@@ -610,10 +310,8 @@ function Analytics() {
                                 }
                             />
                         </FilterField>
-
                     </div>
                 )}
-
 
                 {errorsBySection.filters && (
                     <div className="filter-error">
@@ -621,20 +319,14 @@ function Analytics() {
                     </div>
                 )}
 
-
                 <div className="filter-actions">
-
                     <span className="filter-summary">
                         {filters.provider ||
                             "All providers"}
-
                         {" · "}
-
                         {filters.model ||
                             "All models"}
-
                         {" · "}
-
                         {filters.status ||
                             "All statuses"}
                     </span>
@@ -648,18 +340,12 @@ function Analytics() {
                     >
                         Apply Filters
                     </button>
-
                 </div>
-
             </section>
 
-
-            {/* =================================================
-                KPI GRID
-            ================================================= */}
+            {/* KPI GRID */}
 
             <section className="metric-grid">
-
                 <MetricCard
                     label="Total Requests"
                     value={formatNumber(
@@ -726,13 +412,9 @@ function Analytics() {
                             : "—"
                     }
                 />
-
             </section>
 
-
-            {/* =================================================
-                REQUEST ACTIVITY
-            ================================================= */}
+            {/* REQUEST ACTIVITY */}
 
             <ChartCard
                 title="Request Activity"
@@ -755,11 +437,8 @@ function Analytics() {
                             bottom: 0,
                         }}
                     >
-
                         <CartesianGrid
-                            stroke={
-                                CHART.grid
-                            }
+                            stroke={CHART.grid}
                             strokeDasharray="3 5"
                             vertical={false}
                         />
@@ -797,16 +476,12 @@ function Analytics() {
                             }
                             strokeWidth={2.5}
                             dot={false}
-                            activeDot={{
-                                r: 5,
-                            }}
+                            activeDot={{ r: 5 }}
                         />
 
                         <Line
                             type="monotone"
-                            dataKey={
-                                "successful_requests"
-                            }
+                            dataKey="successful_requests"
                             name="Successful"
                             stroke={
                                 CHART.secondary
@@ -817,9 +492,7 @@ function Analytics() {
 
                         <Line
                             type="monotone"
-                            dataKey={
-                                "error_requests"
-                            }
+                            dataKey="error_requests"
                             name="Errors"
                             stroke={
                                 CHART.error
@@ -830,9 +503,7 @@ function Analytics() {
 
                         <Line
                             type="monotone"
-                            dataKey={
-                                "timeout_requests"
-                            }
+                            dataKey="timeout_requests"
                             name="Timeouts"
                             stroke={
                                 CHART.warning
@@ -840,15 +511,11 @@ function Analytics() {
                             strokeWidth={2}
                             dot={false}
                         />
-
                     </LineChart>
                 </ResponsiveContainer>
             </ChartCard>
 
-
-            {/* =================================================
-                COST + TOKENS
-            ================================================= */}
+            {/* COST + TOKENS */}
 
             <div className="two-column">
 
@@ -873,11 +540,8 @@ function Analytics() {
                                 bottom: 0,
                             }}
                         >
-
                             <CartesianGrid
-                                stroke={
-                                    CHART.grid
-                                }
+                                stroke={CHART.grid}
                                 strokeDasharray="3 5"
                                 vertical={false}
                             />
@@ -898,9 +562,7 @@ function Analytics() {
                                 contentStyle={
                                     tooltipStyle
                                 }
-                                formatter={(
-                                    value
-                                ) =>
+                                formatter={(value) =>
                                     formatCost(
                                         value
                                     )
@@ -920,11 +582,9 @@ function Analytics() {
                                     CHART.primary
                                 }
                             />
-
                         </LineChart>
                     </ResponsiveContainer>
                 </ChartCard>
-
 
                 <ChartCard
                     title="Token Usage"
@@ -947,11 +607,8 @@ function Analytics() {
                                 bottom: 0,
                             }}
                         >
-
                             <CartesianGrid
-                                stroke={
-                                    CHART.grid
-                                }
+                                stroke={CHART.grid}
                                 strokeDasharray="3 5"
                                 vertical={false}
                             />
@@ -982,9 +639,7 @@ function Analytics() {
 
                             <Line
                                 type="monotone"
-                                dataKey={
-                                    "total_input_tokens"
-                                }
+                                dataKey="total_input_tokens"
                                 name="Input"
                                 stroke={
                                     CHART.primary
@@ -995,9 +650,7 @@ function Analytics() {
 
                             <Line
                                 type="monotone"
-                                dataKey={
-                                    "total_output_tokens"
-                                }
+                                dataKey="total_output_tokens"
                                 name="Output"
                                 stroke={
                                     CHART.secondary
@@ -1005,17 +658,13 @@ function Analytics() {
                                 strokeWidth={2}
                                 dot={false}
                             />
-
                         </LineChart>
                     </ResponsiveContainer>
                 </ChartCard>
 
             </div>
 
-
-            {/* =================================================
-                LATENCY
-            ================================================= */}
+            {/* LATENCY */}
 
             <ChartCard
                 title="Latency Distribution"
@@ -1038,11 +687,8 @@ function Analytics() {
                             bottom: 0,
                         }}
                     >
-
                         <CartesianGrid
-                            stroke={
-                                CHART.grid
-                            }
+                            stroke={CHART.grid}
                             strokeDasharray="3 5"
                             vertical={false}
                         />
@@ -1063,9 +709,7 @@ function Analytics() {
                             contentStyle={
                                 tooltipStyle
                             }
-                            formatter={(
-                                value
-                            ) =>
+                            formatter={(value) =>
                                 formatLatency(
                                     value
                                 )
@@ -1093,23 +737,17 @@ function Analytics() {
                                                 CHART.secondary,
                                                 CHART.primary,
                                                 CHART.primary,
-                                            ][
-                                                index
-                                            ]
+                                            ][index]
                                         }
                                     />
                                 )
                             )}
                         </Bar>
-
                     </BarChart>
                 </ResponsiveContainer>
             </ChartCard>
 
-
-            {/* =================================================
-                MODEL PERFORMANCE
-            ================================================= */}
+            {/* MODEL PERFORMANCE */}
 
             <ChartCard
                 title="Model Performance"
@@ -1119,11 +757,8 @@ function Analytics() {
                 }
                 empty={!models.length}
             >
-
                 <div className="table-wrapper">
-
                     <table className="analytics-table">
-
                         <thead>
                             <tr>
                                 <th>Provider</th>
@@ -1138,90 +773,76 @@ function Analytics() {
                         </thead>
 
                         <tbody>
+                            {models.map((model) => (
+                                <tr
+                                    key={`${model.provider}-${model.model}`}
+                                >
+                                    <td>
+                                        <span className="provider-badge">
+                                            {
+                                                model.provider
+                                            }
+                                        </span>
+                                    </td>
 
-                            {models.map(
-                                (model) => (
-                                    <tr
-                                        key={`${model.provider}-${model.model}`}
-                                    >
+                                    <td>
+                                        <span className="model-name">
+                                            {model.model}
+                                        </span>
+                                    </td>
 
-                                        <td>
-                                            <span className="provider-badge">
-                                                {
-                                                    model.provider
-                                                }
-                                            </span>
-                                        </td>
+                                    <td>
+                                        {formatNumber(
+                                            model.requests
+                                        )}
+                                    </td>
 
-                                        <td>
-                                            <span className="model-name">
-                                                {
-                                                    model.model
-                                                }
-                                            </span>
-                                        </td>
+                                    <td>
+                                        {formatNumber(
+                                            model.successful_requests
+                                        )}
+                                    </td>
 
-                                        <td>
-                                            {formatNumber(
-                                                model.requests
-                                            )}
-                                        </td>
+                                    <td>
+                                        {formatLatency(
+                                            model.average_latency
+                                        )}
+                                    </td>
 
-                                        <td>
-                                            {formatNumber(
-                                                model.successful_requests
-                                            )}
-                                        </td>
+                                    <td>
+                                        {formatLatency(
+                                            model.p95_latency
+                                        )}
+                                    </td>
 
-                                        <td>
-                                            {formatLatency(
-                                                model.average_latency
-                                            )}
-                                        </td>
+                                    <td>
+                                        {formatCost(
+                                            model.total_cost
+                                        )}
+                                    </td>
 
-                                        <td>
-                                            {formatLatency(
-                                                model.p95_latency
-                                            )}
-                                        </td>
-
-                                        <td>
-                                            {formatCost(
-                                                model.total_cost
-                                            )}
-                                        </td>
-
-                                        <td>
-                                            <span
-                                                className={
-                                                    getRateClass(
-                                                        model.error_rate
-                                                    )
-                                                }
-                                            >
-                                                {formatNumber(
+                                    <td>
+                                        <span
+                                            className={
+                                                getRateClass(
                                                     model.error_rate
-                                                )}
-                                                %
-                                            </span>
-                                        </td>
-
-                                    </tr>
-                                )
-                            )}
-
+                                                )
+                                            }
+                                        >
+                                            {formatNumber(
+                                                model.error_rate
+                                            )}
+                                            %
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
-
                     </table>
-
                 </div>
-
             </ChartCard>
 
-
-            {/* =================================================
-                PROVIDER CHARTS
-            ================================================= */}
+            {/* PROVIDER CHARTS */}
 
             <div className="two-column">
 
@@ -1247,11 +868,8 @@ function Analytics() {
                                 bottom: 5,
                             }}
                         >
-
                             <CartesianGrid
-                                stroke={
-                                    CHART.grid
-                                }
+                                stroke={CHART.grid}
                                 strokeDasharray="3 5"
                                 horizontal={false}
                             />
@@ -1274,9 +892,7 @@ function Analytics() {
                                 contentStyle={
                                     tooltipStyle
                                 }
-                                formatter={(
-                                    value
-                                ) =>
+                                formatter={(value) =>
                                     formatCost(
                                         value
                                     )
@@ -1297,11 +913,9 @@ function Analytics() {
                                 ]}
                                 barSize={28}
                             />
-
                         </BarChart>
                     </ResponsiveContainer>
                 </ChartCard>
-
 
                 <ChartCard
                     title="Provider Latency"
@@ -1324,11 +938,8 @@ function Analytics() {
                                 bottom: 5,
                             }}
                         >
-
                             <CartesianGrid
-                                stroke={
-                                    CHART.grid
-                                }
+                                stroke={CHART.grid}
                                 strokeDasharray="3 5"
                                 vertical={false}
                             />
@@ -1348,9 +959,7 @@ function Analytics() {
                                 contentStyle={
                                     tooltipStyle
                                 }
-                                formatter={(
-                                    value
-                                ) =>
+                                formatter={(value) =>
                                     formatLatency(
                                         value
                                     )
@@ -1371,17 +980,13 @@ function Analytics() {
                                 ]}
                                 barSize={42}
                             />
-
                         </BarChart>
                     </ResponsiveContainer>
                 </ChartCard>
 
             </div>
 
-
-            {/* =================================================
-                PROVIDER PERFORMANCE
-            ================================================= */}
+            {/* PROVIDER PERFORMANCE */}
 
             <ChartCard
                 title="Provider Performance"
@@ -1391,11 +996,8 @@ function Analytics() {
                 }
                 empty={!providers.length}
             >
-
                 <div className="table-wrapper">
-
                     <table className="analytics-table">
-
                         <thead>
                             <tr>
                                 <th>Provider</th>
@@ -1411,7 +1013,6 @@ function Analytics() {
                         </thead>
 
                         <tbody>
-
                             {providers.map(
                                 (provider) => (
                                     <tr
@@ -1419,7 +1020,6 @@ function Analytics() {
                                             provider.provider
                                         }
                                     >
-
                                         <td>
                                             <span className="provider-badge">
                                                 {
@@ -1484,23 +1084,15 @@ function Analytics() {
                                                 %
                                             </span>
                                         </td>
-
                                     </tr>
                                 )
                             )}
-
                         </tbody>
-
                     </table>
-
                 </div>
-
             </ChartCard>
 
-
-            {/* =================================================
-                TOP ERRORS
-            ================================================= */}
+            {/* TOP ERRORS */}
 
             <ChartCard
                 title="Top Errors"
@@ -1510,22 +1102,20 @@ function Analytics() {
                 }
                 empty={!errors.length}
             >
-
                 <ResponsiveContainer
                     width="100%"
-                    height={
-                        Math.max(
-                            230,
-                            Math.min(
-                                errors.slice(
-                                    0,
-                                    5
-                                ).length * 52 +
-                                    70,
-                                340
-                            )
+                    height={Math.max(
+                        230,
+                        Math.min(
+                            errors.slice(
+                                0,
+                                5
+                            ).length *
+                                52 +
+                                70,
+                            340
                         )
-                    }
+                    )}
                 >
                     <BarChart
                         data={errors.slice(
@@ -1540,11 +1130,8 @@ function Analytics() {
                             bottom: 5,
                         }}
                     >
-
                         <CartesianGrid
-                            stroke={
-                                CHART.grid
-                            }
+                            stroke={CHART.grid}
                             strokeDasharray="3 5"
                             horizontal={false}
                         />
@@ -1561,7 +1148,9 @@ function Analytics() {
                             width={220}
                             tickLine={false}
                             axisLine={false}
-                            tickFormatter={truncateError}
+                            tickFormatter={
+                                truncateError
+                            }
                         />
 
                         <Tooltip
@@ -1584,568 +1173,15 @@ function Analytics() {
                             ]}
                             barSize={25}
                         />
-
                     </BarChart>
                 </ResponsiveContainer>
-
             </ChartCard>
 
             <TraceExplorer
                 traces={traces}
                 error={errorsBySection.traces}
             />
-
-
         </div>
-    );
-}
-
-
-/* =============================================================
-   COMPONENTS
-============================================================= */
-
-
-function FilterField({
-    label,
-    children,
-}) {
-    return (
-        <div className="filter-field">
-            <label>{label}</label>
-            {children}
-        </div>
-    );
-}
-
-
-function MetricCard({
-    label,
-    value,
-    tone = "",
-    icon,
-}) {
-    return (
-        <div
-            className={`metric-card ${
-                tone ? `metric-${tone}` : ""
-            }`}
-        >
-
-            <div className="metric-card-top">
-
-                <span className="metric-label">
-                    {label}
-                </span>
-
-                {icon && (
-                    <span className="metric-icon">
-                        {icon}
-                    </span>
-                )}
-
-            </div>
-
-            <strong className="metric-value">
-                {value}
-            </strong>
-
-        </div>
-    );
-}
-
-
-function ChartCard({
-    title,
-    subtitle,
-    children,
-    error,
-    empty,
-}) {
-    return (
-        <section className="chart-card">
-
-            <div className="chart-card-header">
-
-                <div>
-                    <h2>{title}</h2>
-
-                    {subtitle && (
-                        <p>{subtitle}</p>
-                    )}
-                </div>
-
-            </div>
-
-            {error ? (
-                <div className="section-error">
-                    <strong>
-                        Unable to load this section
-                    </strong>
-
-                    <span>{error}</span>
-                </div>
-            ) : empty ? (
-                <div className="empty-state">
-                    No data available for the
-                    selected filters.
-                </div>
-            ) : (
-                children
-            )}
-
-        </section>
-    );
-}
-
-
-function TraceExplorer({
-    traces,
-    error,
-}) {
-    const [selectedTrace, setSelectedTrace] =
-        useState(null);
-
-            useEffect(() => {
-                if (selectedTrace) {
-                    document.body.style.overflow = "hidden";
-                } else {
-                    document.body.style.overflow = "";
-                }
-
-                return () => {
-                    document.body.style.overflow = "";
-                };
-            }, [selectedTrace]);
-    return (
-        <ChartCard
-            title="Trace Explorer"
-            subtitle="Inspect individual requests and their complete telemetry"
-            error={error}
-            empty={!traces.length}
-        >
-
-            {/* =================================================
-                TRACE TABLE
-            ================================================= */}
-
-            <div className="table-wrapper trace-table-wrapper">
-
-                <table className="analytics-table trace-table">
-
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Provider</th>
-                            <th>Model</th>
-                            <th>Status</th>
-                            <th>Latency</th>
-                            <th>Input</th>
-                            <th>Output</th>
-                            <th>Cost</th>
-                            <th>Trace ID</th>
-                        </tr>
-                    </thead>
-
-
-                    <tbody>
-
-                        {traces.map((trace) => (
-
-                            <tr
-                                key={trace.trace_id}
-                                className={
-                                    `trace-row ${
-                                        selectedTrace?.trace_id ===
-                                        trace.trace_id
-                                            ? "trace-row-selected"
-                                            : ""
-                                    }`
-                                }
-                                onClick={() =>
-                                    setSelectedTrace(trace)
-                                }
-                            >
-
-                                <td>
-                                    {formatTraceTime(
-                                        trace.created_at
-                                    )}
-                                </td>
-
-
-                                <td>
-                                    <span className="provider-badge">
-                                        {trace.provider}
-                                    </span>
-                                </td>
-
-
-                                <td>
-                                    <span className="model-name">
-                                        {trace.model}
-                                    </span>
-                                </td>
-
-
-                                <td>
-                                    <span
-                                        className={
-                                            `trace-status ` +
-                                            `trace-status-${trace.status}`
-                                        }
-                                    >
-                                        {trace.status}
-                                    </span>
-                                </td>
-
-
-                                <td>
-                                    {formatLatency(
-                                        trace.latency_ms
-                                    )}
-                                </td>
-
-
-                                <td>
-                                    {formatNumber(
-                                        trace.input_tokens
-                                    )}
-                                </td>
-
-
-                                <td>
-                                    {formatNumber(
-                                        trace.output_tokens
-                                    )}
-                                </td>
-
-
-                                <td>
-                                    {formatCost(
-                                        trace.cost
-                                    )}
-                                </td>
-
-
-                                <td>
-                                    <span className="trace-id">
-                                        {trace.trace_id.slice(
-                                            0,
-                                            8
-                                        )}
-                                        …
-                                    </span>
-                                </td>
-
-                            </tr>
-
-                        ))}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-
-            {/* =================================================
-                SELECTED TRACE DETAILS
-            ================================================= */}
-            {selectedTrace &&
-                createPortal(
-                    <div
-                        className="trace-modal-backdrop"
-                        onClick={() => setSelectedTrace(null)}
-                    >
-                        <div
-                            className="trace-modal"
-                            onClick={(event) =>
-                                event.stopPropagation()
-                            }
-                        >
-                            <TraceDetails
-                                trace={selectedTrace}
-                                onClose={() =>
-                                    setSelectedTrace(null)
-                                }
-                            />
-                        </div>
-                    </div>,
-                    document.body
-                )}
-        </ChartCard>
-    );
-}
-
-function TraceDetails({
-    trace,
-    onClose,
-}) {
-    return (
-        <div className="trace-details">
-
-            <div className="trace-details-header">
-
-                <div>
-                    <div className="analytics-eyebrow">
-                        TRACE
-                    </div>
-
-                    <h3>
-                        {trace.trace_id}
-                    </h3>
-                </div>
-
-                <button
-                    className="trace-close"
-                    onClick={onClose}
-                >
-                    ×
-                </button>
-
-            </div>
-
-
-            <div className="trace-details-grid">
-
-                <TraceField
-                    label="Provider"
-                    value={trace.provider}
-                />
-
-                <TraceField
-                    label="Model"
-                    value={trace.model}
-                />
-
-                <TraceField
-                    label="Status"
-                    value={trace.status}
-                />
-
-                <TraceField
-                    label="Latency"
-                    value={formatLatency(
-                        trace.latency_ms
-                    )}
-                />
-
-                <TraceField
-                    label="Input Tokens"
-                    value={formatNumber(
-                        trace.input_tokens
-                    )}
-                />
-
-                <TraceField
-                    label="Output Tokens"
-                    value={formatNumber(
-                        trace.output_tokens
-                    )}
-                />
-
-                <TraceField
-                    label="Cost"
-                    value={formatCost(
-                        trace.cost
-                    )}
-                />
-
-                <TraceField
-                    label="Created"
-                    value={formatTraceTime(
-                        trace.created_at
-                    )}
-                />
-
-            </div>
-
-
-            <div className="trace-content-section">
-
-                <h4>Prompt</h4>
-
-                <pre>
-                    {trace.prompt || "—"}
-                </pre>
-
-            </div>
-
-
-            <div className="trace-content-section">
-
-                <h4>Response</h4>
-
-                <pre>
-                    {trace.response || "—"}
-                </pre>
-
-            </div>
-
-
-            {trace.error_message && (
-                <div className="trace-content-section">
-
-                    <h4>Error</h4>
-
-                    <pre>
-                        {trace.error_message}
-                    </pre>
-
-                </div>
-            )}
-
-
-            <div className="trace-content-section">
-
-                <h4>Metadata</h4>
-
-                <pre>
-                    {JSON.stringify(
-                        trace.metadata_trace,
-                        null,
-                        2
-                    )}
-                </pre>
-
-            </div>
-
-        </div>
-    );
-}
-
-function TraceField({
-    label,
-    value,
-}) {
-    return (
-        <div className="trace-field">
-
-            <span>
-                {label}
-            </span>
-
-            <strong>
-                {value}
-            </strong>
-
-        </div>
-    );
-}
-
-/* =============================================================
-   HELPERS
-============================================================= */
-
-
-const tooltipStyle = {
-    background: "#ffffff",
-    border: "1px solid #deddd6",
-    borderRadius: "8px",
-    boxShadow:
-        "0 8px 24px rgba(15, 23, 42, 0.08)",
-    fontSize: "12px",
-};
-
-
-function formatNumber(value) {
-    if (
-        value === null ||
-        value === undefined ||
-        Number.isNaN(Number(value))
-    ) {
-        return "—";
-    }
-
-    return Number(value).toLocaleString(
-        undefined,
-        {
-            maximumFractionDigits: 2,
-        }
-    );
-}
-
-
-function formatCost(value) {
-    if (
-        value === null ||
-        value === undefined ||
-        Number.isNaN(Number(value))
-    ) {
-        return "—";
-    }
-
-    return `$${Number(value).toFixed(4)}`;
-}
-
-
-function formatLatency(value) {
-    if (
-        value === null ||
-        value === undefined ||
-        Number.isNaN(Number(value))
-    ) {
-        return "—";
-    }
-
-    const latency = Number(value);
-
-    if (latency >= 1000) {
-        return `${(
-            latency / 1000
-        ).toFixed(2)} s`;
-    }
-
-    return `${latency.toFixed(0)} ms`;
-}
-
-
-function formatTimestamp(timestamp) {
-    if (!timestamp) {
-        return "";
-    }
-
-    const date = new Date(timestamp);
-
-    if (Number.isNaN(date.getTime())) {
-        return "";
-    }
-
-    /*
-     * For hourly data include the time.
-     * For daily/monthly data show the date.
-     */
-    return date.toLocaleDateString(
-        undefined,
-        {
-            month: "short",
-            day: "numeric",
-        }
-    );
-}
-
-function formatTraceTime(timestamp) {
-    if (!timestamp) {
-        return "—";
-    }
-
-    const date = new Date(timestamp);
-
-    if (Number.isNaN(date.getTime())) {
-        return "—";
-    }
-
-    return date.toLocaleString(
-        undefined,
-        {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: false,
-        }
     );
 }
 
@@ -2161,7 +1197,6 @@ function truncateError(value) {
     return `${value.slice(0, 32)}…`;
 }
 
-
 function getRateClass(rate) {
     const value = Number(rate);
 
@@ -2175,45 +1210,5 @@ function getRateClass(rate) {
 
     return "rate-low";
 }
-
-
-function getErrorMessage(error) {
-    if (!error) {
-        return "Unknown error.";
-    }
-
-    if (error.response) {
-        const status =
-            error.response.status;
-
-        if (status === 401) {
-            return "Authentication expired.";
-        }
-
-        if (status === 403) {
-            return "You are not allowed to view this analytics data.";
-        }
-
-        if (status === 422) {
-            return "Invalid analytics filters.";
-        }
-
-        if (status >= 500) {
-            return "Server error. Please try again later.";
-        }
-
-        return (
-            error.response.data?.detail ||
-            "Unable to load this section."
-        );
-    }
-
-    if (error.request) {
-        return "Unable to connect to the server.";
-    }
-
-    return "Something went wrong.";
-}
-
 
 export default Analytics;

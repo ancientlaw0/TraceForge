@@ -210,10 +210,6 @@ class GroqIntegration(ProviderIntegration):
     ) -> float:
 
         # Prices are USD per 1 million tokens.
-        #
-        # Unknown models are still recorded.
-        # Their cost is simply 0 until pricing
-        # is available.
 
         pricing = {
 
