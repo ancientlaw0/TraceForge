@@ -221,15 +221,8 @@ class OpenAIIntegration(ProviderIntegration):
 
         return str(error)
 
-    def patch_target(self):
-        completions = getattr(
-            import_module(
-                "openai.resources.chat.completions"
-            ),
-            "Completions",
-        )
-
-        return (
-            completions,
+    def install( self, patcher, client, ) -> None:
+        patcher.patch(
+            client.chat.completions,
             "create",
         )

@@ -206,6 +206,10 @@ function Analytics() {
                             <option value="custom">
                                 Custom range
                             </option>
+
+                            <option value="all">
+                                All time
+                            </option>
                         </select>
                     </FilterField>
 

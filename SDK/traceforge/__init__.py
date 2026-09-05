@@ -135,6 +135,35 @@ def instrument_deepseek(client):
         client,
     )
 
+
+def instrument_openai(client):
+
+    if not _initialized:
+        raise RuntimeError(
+            "Call traceforge.init() first."
+        )
+
+    from traceforge.integrations.openai import (
+        OpenAIIntegration,
+    )
+
+    integration = OpenAIIntegration()
+
+    patcher = Patcher(
+        integration=integration,
+        recorder=_recorder,
+    )
+
+    integration.install(
+        patcher,
+        client,
+    )
+
+
 async def flush():
     if _recorder is not None:
         await _recorder.flush()
+
+def flush_sync():
+    if _recorder is not None:
+        _recorder.flush_sync()

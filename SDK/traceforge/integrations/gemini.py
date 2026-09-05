@@ -191,33 +191,16 @@ class GeminiIntegration(ProviderIntegration):
 
         return str(error)
 
-    def patch_target(self):
-
-        client_module = import_module(
-            "google.genai.client"
-        )
-
-        async_client = getattr(
-            client_module,
-            "AsyncClient",
-        )
-
-        models_class = getattr(
-            async_client,
-            "models",
-            None,
-        )
-
-        return (
-            models_class,
-            "generate_content",
-        )
-
     def install(
         self,
         patcher,
         client,
     ) -> None:
+
+        patcher.patch(
+            client.models,
+            "generate_content",
+        )
 
         patcher.patch(
             client.aio.models,

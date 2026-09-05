@@ -2,9 +2,12 @@ import secrets
 from pwdlib import PasswordHash
 password_hasher = PasswordHash.recommended()
 
-def generate_api_key() -> str:
-    """ Generates a cryptographically secure API key. Example: tf_sk_kL8f2PqA9nY4... """
-    return f"tf_sk_{secrets.token_urlsafe(32)}" # the more the bytes the harder to guess
+def generate_api_key() -> tuple[str, str]:
+    """Generates an API key and its public lookup prefix."""
+    key_prefix = secrets.token_hex(4)
+    secret = secrets.token_urlsafe(32)
+    api_key = f"tf_sk_{key_prefix}_{secret}"
+    return api_key, key_prefix
 
 def hash_api_key(api_key: str) -> str:
     """ Hashes the API key before storing it in the database. """

@@ -1,16 +1,17 @@
 from locust import HttpUser, task, between
 import uuid
 import random
+import os
 import dotenv
 
 dotenv.load_dotenv()
 
-API_KEY = dotenv.getenv("TEST_API_KEY")
+API_KEY = os.getenv("TEST_API_KEY")
 
 
 class TraceForgeUser(HttpUser):
 
-    wait_time = between(0.01, 0.1)
+    wait_time = between(1,2)
 
     @task
     def send_trace(self):

@@ -34,11 +34,7 @@ async def publish_event(
     key: str,
     event: dict[str, Any],
 ) -> None:
-    """ Publishes an event to the specified Kafka topic. """
+
     if producer is None:
         raise RuntimeError("Kafka producer has not been started.")
-    await producer.send_and_wait(
-        topic=topic,
-        key=key,
-        value=event,
-    )
+    await producer.send( topic=topic, key=key, value=event, )

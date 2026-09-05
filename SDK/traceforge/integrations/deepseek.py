@@ -188,13 +188,13 @@ class DeepSeekIntegration(ProviderIntegration):
     ) -> str:
         return str(error)
 
-    def patch_target(self):
+    def install(
+        self,
+        patcher,
+        client,
+    ) -> None:
 
-        resources = import_module(
-            "openai.resources.chat.completions"
-        )
-
-        return (
-            resources.AsyncCompletions,
+        patcher.patch(
+            client.chat.completions,
             "create",
         )

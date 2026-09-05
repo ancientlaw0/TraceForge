@@ -1,5 +1,4 @@
 from typing import Any
-from importlib import import_module
 
 from traceforge.integrations.base import ProviderIntegration
 
@@ -120,7 +119,13 @@ class OllamaIntegration(ProviderIntegration):
     ) -> str:
         return str(error)
 
-    def patch_target(self):
-        ollama = import_module("ollama")
+    def install(
+        self,
+        patcher,
+        client,
+    ) -> None:
 
-        return ollama.AsyncClient, "generate"
+        patcher.patch(
+            client,
+            "generate",
+        )

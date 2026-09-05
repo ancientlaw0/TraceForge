@@ -10,28 +10,35 @@ from fastapi import HTTPException
 from typing import List
 
 router = APIRouter( prefix="/api-keys", tags=["API Keys"] )
-
 @router.post(
-    "/", response_model=APIKeyResponse, status_code=status.HTTP_201_CREATED
+    "/",
+    response_model=APIKeyResponse,
+    status_code=status.HTTP_201_CREATED
 )
 async def create_api_key(
     api_key: APIKeyCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Generate plaintext key
-    plain_key = generate_api_key()
+    # Generate plaintext key and public lookup prefix
+    plain_key, key_prefix = generate_api_key()
 
-    # Hash it
+    # Hash the full plaintext key
     hashed_key = hash_api_key(plain_key)
 
-    # Store only hash
-    new_key = APIKey( user_id=current_user.id, name=api_key.name, key_hash=hashed_key )
+    # Store prefix + hash
+    new_key = APIKey(
+        user_id=current_user.id,
+        name=api_key.name,
+        key_prefix=key_prefix,
+        key_hash=hashed_key,
+    )
 
     db.add(new_key)
     await db.commit()
     await db.refresh(new_key)
-    return APIKeyResponse( api_key=plain_key )
+
+    return APIKeyResponse(api_key=plain_key)
 
 @router.get( "/", response_model=List[APIKeyInfo] )
 async def get_api_keys(

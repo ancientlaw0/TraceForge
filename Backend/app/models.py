@@ -27,6 +27,7 @@ class APIKey(Base):
     user_id = Column( Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False )
     name = Column( String(100), nullable=False )
     key_hash = Column( String(255), nullable=False, unique=True )
+    key_prefix = Column( String(16), unique=True, index=True, nullable=True, )
     is_active = Column( Boolean, default=True, nullable=False )
     last_used_at = Column( DateTime(timezone=True), nullable=True )
     created_at = Column( DateTime(timezone=True), server_default=func.now(), nullable=False )

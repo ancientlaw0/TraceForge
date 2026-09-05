@@ -1,20 +1,16 @@
 import httpx
+
 from traceforge.config import get_config
 from traceforge.trace import Trace
 
+
 class HTTPTransport:
-    def __init__(
-        self,
-        timeout: float = 5.0,
-    ):
+
+    def __init__(self, timeout: float = 5.0):
         self.timeout = timeout
 
-    async def send(
-        self,
-        trace: Trace,
-    ) -> None:
-        config = get_config()
-        payload = {
+    def _payload(self, trace: Trace) -> dict:
+        return {
             "trace_id": str(trace.trace_id),
             "provider": trace.provider,
             "model": trace.model,
@@ -29,17 +25,34 @@ class HTTPTransport:
             "metadata_trace": trace.metadata_trace,
         }
 
-        async with httpx.AsyncClient(
-            timeout=self.timeout
-        ) as client:
+    async def send(self, trace: Trace) -> None:
+
+        config = get_config()
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
 
             response = await client.post(
                 f"{config.endpoint}/traces/",
-                json=payload,
+                json=self._payload(trace),
                 headers={
-                    "Authorization": (
-                        f"Bearer {config.api_key}"
-                    ),
+                    "Authorization": f"Bearer {config.api_key}",
                 },
             )
+
+            response.raise_for_status()
+
+    def send_sync(self, trace: Trace) -> None:
+
+        config = get_config()
+
+        with httpx.Client(timeout=self.timeout) as client:
+
+            response = client.post(
+                f"{config.endpoint}/traces/",
+                json=self._payload(trace),
+                headers={
+                    "Authorization": f"Bearer {config.api_key}",
+                },
+            )
+
             response.raise_for_status()

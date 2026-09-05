@@ -23,13 +23,13 @@ async def create_trace(
 ):
     trace_event = {
         **trace.model_dump(mode="json"),
-        "user_id": auth.user.id,
-        "api_key_id": auth.api_key.id,
+        "user_id": auth.user_id,
+        "api_key_id": auth.api_key_id,
     }
 
     await usage_limiter.check(
         db=db,
-        user_id=auth.user.id,
+        user_id=auth.user_id,
     )
 
     await publish_event(

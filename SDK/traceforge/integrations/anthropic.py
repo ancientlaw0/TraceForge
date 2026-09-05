@@ -1,8 +1,5 @@
 from typing import Any
-from importlib import import_module
-
 from traceforge.integrations.base import ProviderIntegration
-
 
 class AnthropicIntegration(ProviderIntegration):
 
@@ -242,14 +239,14 @@ class AnthropicIntegration(ProviderIntegration):
         error: Exception,
     ) -> str:
         return str(error)
+    
+    def install(
+        self,
+        patcher,
+        client,
+    ) -> None:
 
-    def patch_target(self):
-
-        resources = import_module(
-            "anthropic.resources.messages"
-        )
-
-        return (
-            resources.AsyncMessages,
+        patcher.patch(
+            client.messages,
             "create",
         )
