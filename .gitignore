@@ -13,7 +13,6 @@ venv/
 **/.env
 
 # IDE
-.vscode/
 .idea/
 
 # Python cache
@@ -33,3 +32,9 @@ Thumbs.db
 
 # Alembic cache
 alembic/__pycache__/
+
+
+# Python packaging
+*.egg-info/
+build/
+dist/

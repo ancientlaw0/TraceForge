@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     NVIDIA_API_KEY: str
     LLM_MODEL: str 
 
+    AUTH_CACHE_TTL: int  
+
     model_config = SettingsConfigDict(
         env_file=( ".env", ),
         extra="ignore",

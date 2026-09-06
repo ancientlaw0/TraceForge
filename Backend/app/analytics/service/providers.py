@@ -113,11 +113,6 @@ async def get_providers(
         timeout_requests = int(
             row.timeout_requests or 0
         )
-
-        # -----------------------------------------
-        # Rates
-        # -----------------------------------------
-
         if requests > 0:
 
             error_rate = (
@@ -137,9 +132,6 @@ async def get_providers(
             error_rate = 0.0
             timeout_rate = 0.0
 
-        # -----------------------------------------
-        # Response
-        # -----------------------------------------
 
         response.append(
             ProviderAnalyticsResponse(

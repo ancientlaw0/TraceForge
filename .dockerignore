@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+Backend/.env
+Backend/venv
+Frontend/node_modules
+Frontend/dist
+__pycache__
+*.pyc
+.pytest_cache
+.vscode
+Locusts/__pycache__

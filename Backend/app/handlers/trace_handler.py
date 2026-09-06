@@ -21,26 +21,27 @@ async def process(event: dict):
 
             await redis_metrics.process(trace)
 
-        except IntegrityError:
-            await db.rollback()
-
+        except IntegrityError as error:
             logger.warning(
-                "Integrity error while processing trace: %s",
+                "Integrity error while processing trace %s: %s",
                 event.get("trace_id"),
+                error
             )
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as error:
             await db.rollback()
 
             logger.exception(
-                "Database error while processing trace: %s",
+                "Database error while processing trace %s: %s",
                 event.get("trace_id"),
+                error
             )
 
-        except Exception:
+        except Exception as error:
             await db.rollback()
 
             logger.exception(
-                "Unexpected error while processing trace: %s",
+                "Unexpected error while processing trace %s: %s",
                 event.get("trace_id"),
+                error
             )

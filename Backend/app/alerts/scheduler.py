@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-
+import asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -41,86 +41,64 @@ class AlertScheduler:
 
     async def run(self):
 
-        result = await self.db.execute(
-            select(Alert)
-            .options(
-                selectinload(Alert.user)
-            )
-            .where(
-                Alert.enabled.is_(True)
-            )
-        )
-
-        alerts = result.scalars().all()
-
-        print(
-            "ALERTS FOUND:",
-            len(alerts),
-        )
-
-        for alert in alerts:
-
-            if not self._can_trigger(alert):
-                print(
-                    "COOLDOWN:",
-                    alert.id,
+        while True:
+            result = await self.db.execute(
+                select(Alert)
+                .options(
+                    selectinload(Alert.user)
                 )
-                continue
-
-            metrics = (
-                await self.redis_reader.get_window_metrics(
-                    alert.user_id,
-                    alert.window_minutes,
+                .where(
+                    Alert.enabled.is_(True)
                 )
             )
 
-            metric_value = (
-                self.evaluator.get_metric_value(
+            alerts = result.scalars().all()
+
+            for alert in alerts:
+
+                if not self._can_trigger(alert):
+                    continue
+
+                metrics = (
+                    await self.redis_reader.get_window_metrics(
+                        alert.user_id,
+                        alert.window_minutes,
+                    )
+                )
+
+                metric_value = (
+                    self.evaluator.get_metric_value(
+                        alert,
+                        metrics,
+                    )
+                )
+
+                if not self.evaluator.evaluate(
                     alert,
                     metrics,
+                ):
+                    continue
+
+                send_email(
+                    to=alert.user.email,
+                    subject=f"TraceForge Alert - {alert.metric.value}",
+                    body=f"""
+    Hello,
+
+    One of your TraceForge alerts has been triggered.
+
+    Metric: {alert.metric.value}
+    Current Value: {metric_value}
+    Threshold: {alert.threshold_value}
+    Window: {alert.window_minutes} minutes
+
+    Regards,
+    TraceForge
+    """,
                 )
-            )
 
-            print(
-                "ALERT CHECK:",
-                alert.id,
-                "| metric =", alert.metric.value,
-                "| value =", metric_value,
-                "| operator =", alert.operator.value,
-                "| threshold =", alert.threshold_value,
-            )
+                alert.last_triggered_at = datetime.now(timezone.utc)
 
-            if not self.evaluator.evaluate(
-                alert,
-                metrics,
-            ):
-                continue
+            await self.db.commit()
 
-            print(
-                "ALERT TRIGGERED:",
-                alert.id,
-            )
-
-            send_email(
-                to=alert.user.email,
-                subject=f"TraceForge Alert - {alert.metric.value}",
-                body=f"""
-Hello,
-
-One of your TraceForge alerts has been triggered.
-
-Metric: {alert.metric.value}
-Current Value: {metric_value}
-Threshold: {alert.threshold_value}
-Window: {alert.window_minutes} minutes
-
-Regards,
-TraceForge
-""",
-            )
-
-            alert.last_triggered_at = (
-                datetime.now(timezone.utc)
-            )
-
-        await self.db.commit()
+            await asyncio.sleep(5)

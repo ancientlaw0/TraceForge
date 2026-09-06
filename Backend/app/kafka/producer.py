@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BOOTSTRAP_SERVERS = (settings.KAFKA_BOOTSTRAP_SERVERS, "localhost:9092")
+BOOTSTRAP_SERVERS = (settings.KAFKA_BOOTSTRAP_SERVERS)
 
 producer: AIOKafkaProducer | None = None
 

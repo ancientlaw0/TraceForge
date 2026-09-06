@@ -20,9 +20,6 @@ async def get_overview(
 ) -> OverviewResponse:
 
     stmt = select(
-        # -------------------------
-        # Request counts
-        # -------------------------
 
         func.count(Trace.id).label("total_requests"),
 
@@ -44,10 +41,6 @@ async def get_overview(
         )
         .label("timeout_requests"),
 
-        # -------------------------
-        # Latency
-        # -------------------------
-
         func.coalesce(
             func.avg(Trace.latency_ms),
             0
@@ -65,18 +58,10 @@ async def get_overview(
         .within_group(Trace.latency_ms)
         .label("p99"),
 
-        # -------------------------
-        # Cost
-        # -------------------------
-
         func.coalesce(
             func.sum(Trace.cost),
             0
         ).label("total_cost"),
-
-        # -------------------------
-        # Tokens
-        # -------------------------
 
         func.coalesce(
             func.sum(Trace.input_tokens),
@@ -104,10 +89,6 @@ async def get_overview(
     result = await db.execute(stmt)
     stats = result.one()
 
-    # =========================================================
-    # BASIC COUNTS
-    # =========================================================
-
     total_requests = int(
         stats.total_requests or 0
     )
@@ -124,17 +105,9 @@ async def get_overview(
         stats.timeout_requests or 0
     )
 
-    # =========================================================
-    # COST
-    # =========================================================
-
     total_cost = float(
         stats.total_cost or 0
     )
-
-    # =========================================================
-    # TOKENS
-    # =========================================================
 
     total_input_tokens = int(
         stats.total_input_tokens or 0
@@ -143,10 +116,6 @@ async def get_overview(
     total_output_tokens = int(
         stats.total_output_tokens or 0
     )
-
-    # =========================================================
-    # LATENCY
-    # =========================================================
 
     average_latency = float(
         stats.average_latency or 0
@@ -163,10 +132,6 @@ async def get_overview(
     p99 = float(
         stats.p99 or 0
     )
-
-    # =========================================================
-    # RATES
-    # =========================================================
 
     if total_requests > 0:
 
@@ -189,17 +154,14 @@ async def get_overview(
         )
 
     else:
-        # Important:
-        # Avoid division by zero when there are
+        # avoiding division by zero when there are
         # no traces matching the filters.
 
         success_rate = 0.0
         error_rate = 0.0
         timeout_rate = 0.0
 
-    # =========================================================
-    # RESPONSE
-    # =========================================================
+
 
     return OverviewResponse(
 

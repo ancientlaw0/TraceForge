@@ -13,7 +13,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  
   redpanda:
     image: redpandadata/redpanda:latest
 
@@ -33,13 +32,14 @@ services:
       - --kafka-addr
       - PLAINTEXT://0.0.0.0:9092
       - --advertise-kafka-addr
-      - PLAINTEXT://localhost:9092
+      - PLAINTEXT://redpanda:9092
 
     ports:
       - "9092:9092"
 
     volumes:
       - redpanda_data:/var/lib/redpanda/data
+
   redis:
     image: redis:7-alpine
     container_name: traceforge-redis
@@ -59,6 +59,88 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    env_file:
+      - ./Backend/.env
+
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      - postgres
+      - redis
+      - redpanda
+
+    restart: unless-stopped
+
+  kafka-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    env_file:
+      - ./Backend/.env
+
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+
+    command: python -m app.kafka.consumer
+
+    depends_on:
+      - postgres
+      - redis
+      - redpanda
+
+    restart: unless-stopped
+
+  alert-handler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    env_file:
+      - ./Backend/.env
+
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+
+    command: python -m app.handlers.alert_handler
+
+    depends_on:
+      - postgres
+      - redis
+      - redpanda
+
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+
+    ports:
+      - "5173:5173"
+
+    depends_on:
+      - backend
+
+    restart: unless-stopped
 
 volumes:
   postgres_data:

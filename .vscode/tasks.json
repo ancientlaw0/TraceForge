@@ -1,0 +1,149 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Docker Task",
+            "type": "shell",
+            "command": "docker compose up",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "docker",
+                "pattern": {
+                    "regexp": ".*"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*",
+                    "endsPattern": ".*(Attaching to|Started).*"
+                }
+            },
+            "presentation": {
+                "panel": "dedicated",
+                "reveal": "always",
+                "focus": false
+            }
+        },
+        {
+            "label": "Backend Server Task",
+            "type": "shell",
+            "command": "venv\\Scripts\\activate && uvicorn app.main:app",
+            "options": {
+                "cwd": "${workspaceFolder}\\Backend"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "uvicorn",
+                "pattern": {
+                    "regexp": ".*"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*",
+                    "endsPattern": ".*Uvicorn running on.*"
+                }
+            },
+            "presentation": {
+                "panel": "dedicated",
+                "reveal": "always",
+                "focus": false
+            },
+            "dependsOn": [
+                "Docker Task"
+            ]
+        },
+        {
+            "label": "Kafka Consumer Task",
+            "type": "shell",
+            "command": "venv\\Scripts\\activate && python -m app.kafka.consumer",
+            "options": {
+                "cwd": "${workspaceFolder}\\Backend"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "kafka",
+                "pattern": {
+                    "regexp": ".*"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*",
+                    "endsPattern": ".*Consumer started.*"
+                }
+            },
+            "presentation": {
+                "panel": "dedicated",
+                "reveal": "always",
+                "focus": false
+            },
+            "dependsOn": [
+                "Backend Server Task"
+            ]
+        },
+        {
+            "label": "Alert Handler Task",
+            "type": "shell",
+            "command": "venv\\Scripts\\activate && python -m app.handlers.alert_handler",
+            "options": {
+                "cwd": "${workspaceFolder}\\Backend"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "alerts",
+                "pattern": {
+                    "regexp": ".*"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*",
+                    "endsPattern": ".*"
+                }
+            },
+            "presentation": {
+                "panel": "dedicated",
+                "reveal": "always",
+                "focus": false
+            },
+            "dependsOn": [
+                "Kafka Consumer Task"
+            ]
+        },
+        {
+            "label": "Frontend Task",
+            "type": "shell",
+            "command": "npm run dev",
+            "options": {
+                "cwd": "${workspaceFolder}\\Frontend"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "frontend",
+                "pattern": {
+                    "regexp": ".*"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*",
+                    "endsPattern": ".*(Local:|ready in|localhost).*"
+                }
+            },
+            "presentation": {
+                "panel": "dedicated",
+                "reveal": "always",
+                "focus": false
+            },
+            "dependsOn": [
+                "Alert Handler Task"
+            ]
+        },
+        {
+            "label": "Start Everything",
+            "dependsOn": [
+                "Frontend Task"
+            ],
+            "dependsOrder": "sequence"
+        }
+    ]
+}

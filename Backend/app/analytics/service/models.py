@@ -117,10 +117,6 @@ async def get_models(
             row.timeout_requests or 0
         )
 
-        # -----------------------------------------
-        # Rates
-        # -----------------------------------------
-
         if requests > 0:
 
             error_rate = (
@@ -139,10 +135,6 @@ async def get_models(
 
             error_rate = 0.0
             timeout_rate = 0.0
-
-        # -----------------------------------------
-        # Response
-        # -----------------------------------------
 
         response.append(
             ModelAnalyticsResponse(

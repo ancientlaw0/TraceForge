@@ -1,30 +1,16 @@
 from enum import Enum
 
-# ===========================
-# Redis Configuration
-# ===========================
-
 BUCKET_TTL = 60 * 60 * 24      # 24 Hours
 MINUTE_BUCKET_FORMAT = "%Y%m%d%H%M"
 
 METRICS_PREFIX = "metrics"
 ALERTS_PREFIX = "alerts"
 
-
-# ===========================
-# Bucket Types
-# ===========================
-
 class BucketType(str, Enum):
     TOTALS = "totals"
     PROVIDER = "provider"
     MODEL = "model"
     STATUS = "status"
-
-
-# ===========================
-# Metric Schemas
-# ===========================
 
 COMMON_METRIC_FIELDS = (
     "requests",

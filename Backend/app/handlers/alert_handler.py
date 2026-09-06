@@ -1,5 +1,4 @@
 import asyncio
-
 from app.database import SessionLocal
 from app.redis.client import redis_client
 from app.alerts.redis_reader import RedisMetricsReader
@@ -18,8 +17,8 @@ async def run():
     while True:
         try:
             await process()
-        except Exception:
-
+        except Exception as error:
+            print(f"Alert handler error: {error}")
             await asyncio.sleep(10)
 
 if __name__ == "__main__":

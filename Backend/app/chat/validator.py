@@ -162,16 +162,9 @@ def validate_columns(tree, tables):
 
         table_aliases[table_name] = aliases
 
-    # -----------------------------------------------------
     # Derived column aliases
-    #
     # Examples:
-    #
-    # COUNT(*) AS error_count
-    # COUNT(*) AS total_requests
-    # date_trunc(...) AS hour
-    # -----------------------------------------------------
-
+    # COUNT(*) AS error_count , COUNT(*) AS total_requests , date_trunc(...) AS hour
     derived_columns = set()
 
     for alias in tree.find_all(exp.Alias):
@@ -322,17 +315,7 @@ def table_has_user_filter(
         left = eq.left
         right = eq.right
 
-        # We want:
-        #
-        # user_id = 3
-        #
-        # or:
-        #
-        # traces.user_id = 3
-        #
-        # or:
-        #
-        # t.user_id = 3
+        # We want: user_id = 3or: traces.user_id = 3or t.user_id = 3
 
         if not (
             isinstance(left, exp.Column)

@@ -1,11 +1,11 @@
 import hashlib
 import json
 import dotenv
-import os
+from app.core.config import settings
 from app.redis.client import redis_client
 dotenv.load_dotenv()
 
-CACHE_TTL = int(os.getenv("AUTH_CACHE_TTL"))
+CACHE_TTL = settings.AUTH_CACHE_TTL
 
 
 def fingerprint(api_key: str) -> str:

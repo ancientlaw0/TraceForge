@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { createLiveSocket } from "../api/live";
-import "../css/Live.css";
+import "../css/live.css";
 
 
 function formatNumber(value) {
