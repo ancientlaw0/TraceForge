@@ -45,24 +45,12 @@ The project is designed to answer questions such as:
 16. SDK Sync and Async Support
 17. Trace Data Model
 18. Quick Start
-19. Local Development Setup (Docker)
-20. Local Development Setup (Github)
-21. Starting TraceForge from VS Code
-22. Starting the Infrastructure with DockerCompose
-23. Running the Backend Manually
-24. Running the Frontend Manually
-25. Running the Kafka Consumer Manually
-26. Running the Alert Handler Manually
-27. Database
-28. Redis
-29. Kafka / Redpanda
-30. Reqirements
-31. Performance
-32. Testing
-33. SDK Packaging and PyPI
-34. Common Development Workflow
-35. Roadmap
-36. License
+19. Performance
+20. Testing
+21. SDK Packaging and PyPI
+22. Common Development Workflow
+23. Roadmap
+24. License
 
 ------------------------------------------------------------------------
 
@@ -382,7 +370,7 @@ TraceForge/
 │
 ├── Locusts/                 # Load/performance testing assets
 │
-├── docker-compose.yml       # Local infrastructure
+├── docker-compose.yml       # Complete stack orchestration
 ├── .env.example
 ├── .gitignore
 ├── LICENSE
@@ -738,8 +726,10 @@ including:
 
 - Dashboard / overview
 - Analytics
-- Live
+- live
 - Chat
+- Alerts
+- Usage
 - Logout
 
 Analytics exposes multiple views for:
@@ -981,54 +971,84 @@ timeout
 
 The trace object is represented by a Python dataclass.
 
-------------------------------------------------------------------------
+# Quick Start
 
-## Quick Start
+TraceForge is provided as a fully containerized application.
 
-For an existing development environment:
+Docker Compose starts the complete TraceForge stack, including the database,
+cache, event broker, backend services, and frontend.
 
-``` cmd
+## Prerequisites
+
+Install:
+
+- Git
+- Docker Desktop
+
+No separate Python, Node.js, PostgreSQL, Redis, or Redpanda installation is
+required when running TraceForge through Docker Compose.
+
+---
+
+## Clone the Repository
+
+```bash
 git clone https://github.com/ancientlaw0/TraceForge.git
 cd TraceForge
+````
+
+---
+
+## Environment Configuration
+
+Create the required environment configuration using the provided
+`.env.example` files.
+
+Never commit real secrets or production credentials.
+
+When running through Docker Compose, application services communicate using
+their Compose service names.
+
+```text
+PostgreSQL → postgres
+Redis      → redis
+Redpanda   → redpanda
+Backend    → backend
 ```
 
-Configure your local environment from the provided `.env.example` files.
+For example:
 
-Install backend dependencies:
-
-``` cmd
-cd Backend
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
+```env
+REDIS_HOST=redis
+REDIS_PORT=6379
+KAFKA_BOOTSTRAP_SERVERS=redpanda:9092
 ```
 
-Install frontend dependencies:
+The backend database connection uses the PostgreSQL service name:
 
-``` cmd
-cd ..\Frontend
-npm install
+```text
+DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@postgres:5432/DATABASE
 ```
 
-Start the infrastructure:
+`localhost` refers to the current container when used from inside Docker.
+Docker services therefore communicate through their Compose service names.
 
-``` cmd
-cd ..
-docker compose up
+---
+
+# Run TraceForge
+
+From the root of the repository:
+
+```bash
+docker compose up --build
 ```
 
-Then use the VS Code task:
+This builds the required application images and starts the complete TraceForge
+stack.
 
-``` text
-Start Everything
-```
+The stack contains:
 
-to run the backend, Kafka consumer, alert handler, and frontend through
-the repository’s configured development tasks.
-
-The resulting development environment is:
-
-``` text
+```text
 TraceForge
 │
 ├── PostgreSQL
@@ -1040,39 +1060,59 @@ TraceForge
 └── React/Vite Frontend
 ```
 
-The SDK remains independently installable and can instrument supported
-LLM providers to send traces into the backend.
+To run the application in the background:
 
-------------------------------------------------------------------------
-# Local Development Setup [Docker]
-## Docker Setup
-
-TraceForge can be run as a fully containerized application using Docker Compose.
-
-The Docker setup runs the complete application stack:
-
-```text
-Docker Compose
-│
-├── PostgreSQL
-├── Redis
-├── Redpanda
-├── Backend
-├── Kafka Consumer
-├── Alert Handler
-└── Frontend
+```bash
+docker compose up --build -d
 ```
 
-This allows the complete platform to be started with a single command instead of manually starting each service.
+Check the running services:
 
+```bash
+docker compose ps
+```
+
+A successful startup should contain:
+
+```text
+postgres
+redis
+redpanda
+backend
+kafka-consumer
+alert-handler
+frontend
+```
 
 ---
 
-### Docker Project Structure
+# Access the Application
+
+Once the containers are running:
+
+### Frontend
+
+```text
+http://localhost:5173
+```
+
+### Backend
+
+```text
+http://localhost:8000
+```
+
+The browser accesses the application through the ports published by Docker.
+
+Docker-internal services communicate through their Compose service names.
+
+---
+
+# Docker Architecture
 
 The Docker-related files are organized as:
 
-```
+```text
 TraceForge/
 │
 ├── Dockerfile
@@ -1092,735 +1132,311 @@ TraceForge/
 └── Locusts/
 ```
 
-The root `Dockerfile` is used for the Python services:
+The root `Dockerfile` is used by the Python services:
 
-```
+```text
 Backend
 Kafka Consumer
 Alert Handler
 ```
 
-The frontend uses its own Dockerfile because it runs on Node/Vite rather than Python.
+The frontend uses its own Dockerfile because it runs on Node.js and Vite.
 
-The root `docker-compose.yml` orchestrates the entire stack.
-
----
-
-### Environment Variables
-
-A typical Docker environment uses the Compose service names for internal communication:
-
-```
-PostgreSQL → postgres
-Redis      → redis
-Redpanda   → redpanda
-Backend    → backend
-```
-
-For example:
-
-```
-REDIS_HOST=redis
-REDIS_PORT=6379
-KAFKA_BOOTSTRAP_SERVERS=redpanda:9092
-```
-
-The backend database URL must also use the PostgreSQL service name rather than `localhost`:
-
-```
-DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@postgres:5432/DATABASE
-```
-
-`localhost` refers to the current container when used from inside Docker, so Docker services must communicate through their Compose service names.
+The root `docker-compose.yml` orchestrates the complete application stack.
 
 ---
 
-### Build and Start TraceForge
+# Docker Services
 
-From the root of the repository:
+## PostgreSQL
 
-```
-docker compose up --build
-```
+PostgreSQL is TraceForge's persistent relational datastore.
 
-This builds the application images and starts all services.
-
-For detached/background mode:
-
-```
-docker compose up --build -d
-```
-
-Check running containers:
-
-```
-docker compose ps
-```
-
-A successful startup should show the following services:
-
-```
-postgres
-redis
-redpanda
-backend
-kafka-consumer
-alert-handler
-frontend
-```
-
----
-
-### Accessing the Application
-
-Once the containers are running:
-
-Frontend:
-
-```
-http://localhost:5173
-```
-
-Backend:
-
-```
-http://localhost:8000
-```
-
-Locust, when running separately:
-
-```
-http://localhost:8089
-```
-
-The browser communicates with the backend through the host-published port:
-
-```
-http://localhost:8000
-```
-
-Docker-internal services communicate through their Compose service names.
-
----
-
-### Docker Services
-
-#### PostgreSQL
-
-PostgreSQL stores TraceForge persistent application data.
-
-```
-postgres:
-  image: postgres:15
-```
-
-The database data is persisted through a Docker volume:
-
-```
-postgres_data
-```
-
----
-
-#### Redis
-
-Redis is used for caching, metrics/usage infrastructure, and other low-latency application operations.
-
-The Redis container uses a persistent volume:
-
-```
-redis_data
-```
-
-Redis is available internally as:
-
-```
-redis:6379
-```
-
----
-
-#### Redpanda
-
-Redpanda provides the Kafka-compatible event streaming layer used by TraceForge.
-
-The Dockerized application connects to:
-
-```
-redpanda:9092
-```
-
-The Redpanda data is persisted using:
-
-```
-redpanda_data
-```
-
----
-
-#### Backend
-
-The backend is built using the root `Dockerfile`.
-
-The container runs FastAPI through Uvicorn:
-
-```
-uvicorn app.main:app
-```
-
-The backend is exposed to the host on:
-
-```
-localhost:8000
-```
-
-The backend image can be configured to run multiple Uvicorn workers:
-
-```
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 6
-```
-
-Worker count should be chosen according to the available CPU and workload.
-
-For local performance testing, multiple workers were used to increase concurrency.
-
----
-
-#### Kafka Consumer
-
-The Kafka consumer uses the same Python image as the backend but runs a different application command:
-
-```
-python -m app.kafka.consumer
-```
-
-It consumes Kafka/Redpanda events and processes asynchronous TraceForge workloads.
-
----
-
-#### Alert Handler
-
-The alert handler also uses the same Python image:
-
-```
-python -m app.handlers.alert_handler
-```
-
-It processes alert-related events independently from the main API process.
-
-Using separate containers for the backend, Kafka consumer, and alert handler keeps these workloads isolated while allowing them to share the same application image and dependencies.
-
----
-
-#### Frontend
-
-The frontend is built separately using the `Frontend/Dockerfile`.
-
-It runs the Vite development server:
-
-```
-npm run dev -- --host 0.0.0.0
-```
-
-The frontend is exposed on:
-
-```
-localhost:5173
-```
-
-The frontend runs inside a Node container, while the browser accesses it through the published host port.
-
----
-
-### Uvicorn Workers
-
-The backend supports multiple Uvicorn workers.
-
-Example:
-
-```
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 6
-```
-
-The worker count controls how many independent application worker processes run inside the backend container.
-
-Increasing workers can improve throughput when the application has available CPU capacity, but more workers do not automatically mean higher performance.
-
-Performance should be validated using load testing rather than assuming a linear relationship.
-
-For example:
-
-```
-4 workers  → benchmark
-6 workers  → benchmark
-8 workers  → benchmark
-```
-
-Record throughput, latency, and failures for each configuration.
-
-For production deployments, choose the worker count based on the host's CPU resources and the workload rather than simply using the largest possible number.
-
----
-
-### Docker Logs
-
-View logs for the complete stack:
-
-```
-docker compose logs -f
-```
-
-View logs for a specific service:
-
-```
-docker compose logs -f backend
-```
-
-```
-docker compose logs -f kafka-consumer
-```
-
-```
-docker compose logs -f alert-handler
-```
-
-```
-docker compose logs -f frontend
-```
-
----
-
-### Stopping TraceForge
-
-Stop all containers:
-
-```
-docker compose down
-```
-
-This stops the services but keeps named Docker volumes.
-
-To remove the containers and volumes as well:
-
-```
-docker compose down -v
-```
-
-The `-v` option removes persistent Docker volumes and therefore deletes persisted local PostgreSQL, Redis, and Redpanda data.
-
-Use it only when you intentionally want to reset the local environment.
-
-------------------------------------------------------------------------
-
-# Local Development Setup [Github]
-
-## Prerequisites
-
-Install the tools needed for your part of the stack:
-
-- Python
-- Node.js and npm
-- Docker Desktop
-- Git
-
-For SDK development/packaging, also use a Python environment capable of
-building a wheel and source distribution.
-
-------------------------------------------------------------------------
-
-## Clone the Repository
-
-``` bash
-git clone https://github.com/ancientlaw0/TraceForge.git
-cd TraceForge
-```
-
-------------------------------------------------------------------------
-
-# Backend Setup
-
-Go to the backend:
-
-``` cmd
-cd Backend
-```
-
-Create a virtual environment:
-
-``` cmd
-python -m venv venv
-```
-
-Activate it on Windows:
-
-``` cmd
-venv\Scripts\activate
-```
-
-Install backend requirements:
-
-``` cmd
-pip install -r requirements.txt
-```
-
-The `requirements.txt` file contains the backend’s direct project
-dependencies.
-
-Do not commit:
-
-``` text
-Backend/venv/
-```
-
-------------------------------------------------------------------------
-
-# Frontend Setup
-
-Open a terminal in the frontend:
-
-``` cmd
-cd Frontend
-```
-
-Install JavaScript dependencies:
-
-``` cmd
-npm install
-```
-
-Do not create a Python virtual environment for the frontend.
-
-The frontend uses:
-
-``` text
-package.json
-package-lock.json
-node_modules/
-```
-
-`node_modules/` is generated locally and should not be committed.
-
-------------------------------------------------------------------------
-
-# Environment Configuration
-
-Create your local environment files from the provided examples.
-
-For the backend, the development configuration includes values such as:
-
-``` env
-DATABASE_URL=postgresql+asyncpg://admin:secret@localhost:5432/lumen
-JWT_SECRET_KEY=change_this_in_your_local_environment
-ALGORITHM=HS256
-```
-
-Never commit real secrets.
-
-Use `.env.example` as the safe template for the variables required by
-the project.
-
-------------------------------------------------------------------------
-
-# Starting TraceForge from VS Code
-
-The repository contains:
-
-``` text
-.vscode/tasks.json
-```
-
-This file defines a development startup chain named:
-
-``` text
-Start Everything
-```
-
-The dependency chain is:
-
-``` text
-Docker Task
-     ↓
-Backend Server Task
-     ↓
-Kafka Consumer Task
-     ↓
-Alert Handler Task
-     ↓
-Frontend Task
-```
-
-The actual commands are:
-
-### Docker
-
-``` cmd
-docker compose up
-```
-
-### Backend
-
-``` cmd
-venv\Scripts\activate && uvicorn app.main:app
-```
-
-### Kafka Consumer
-
-``` cmd
-venv\Scripts\activate && python -m app.kafka.consumer
-```
-
-### Alert Handler
-
-``` cmd
-venv\Scripts\activate && python -m app.handlers.alert_handler
-```
-
-### Frontend
-
-``` cmd
-npm run dev
-```
-
-The `Start Everything` task depends on the frontend task, which in turn
-depends on the previous tasks, so the whole development chain can be
-launched from VS Code instead of manually opening multiple terminals.
-
-This is the preferred convenience workflow for local development.
-
-------------------------------------------------------------------------
-
-# Starting the Infrastructure with Docker Compose
-
-The current `docker-compose.yml` is used for local infrastructure.
-
-It starts:
-
-``` text
-PostgreSQL
-Redpanda
-Redis
-```
-
-Run:
-
-``` bash
-docker compose up
-```
-
-The current Compose services are:
-
-### PostgreSQL
-
-``` yaml
+```yaml
 image: postgres:15
 ```
 
-### Redpanda
+Database data is persisted using the Docker volume:
 
-``` yaml
-image: redpandadata/redpanda:latest
-```
-
-### Redis
-
-``` yaml
-image: redis:7-alpine
-```
-
-The data directories use named volumes so data can persist between
-container restarts:
-
-``` text
+```text
 postgres_data
-redpanda_data
-redis_data
 ```
 
-At present, Docker Compose is the infrastructure layer; the FastAPI
-backend, Kafka consumer, alert handler, and Vite frontend are run by the
-local VS Code tasks.
+The backend connects to PostgreSQL through:
 
-That distinction is intentional for the current development workflow.
-
-------------------------------------------------------------------------
-
-# Running the Backend Manually
-
-From `Backend/`:
-
-``` cmd
-venv\Scripts\activate
-uvicorn app.main:app
+```text
+postgres:5432
 ```
 
-For a development-only auto-reload workflow, Uvicorn can also be started
-with:
-
-``` cmd
-uvicorn app.main:app --reload
-```
-
-------------------------------------------------------------------------
-
-# Running the Frontend Manually
-
-From `Frontend/`:
-
-``` cmd
-npm install
-npm run dev
-```
-
-------------------------------------------------------------------------
-
-# Running the Kafka Consumer Manually
-
-From `Backend/`:
-
-``` cmd
-venv\Scripts\activate
-python -m app.kafka.consumer
-```
-
-------------------------------------------------------------------------
-
-# Running the Alert Handler Manually
-
-From `Backend/`:
-
-``` cmd
-venv\Scripts\activate
-python -m app.handlers.alert_handler
-```
-
-------------------------------------------------------------------------
-
-# Database
-
-TraceForge uses PostgreSQL as its persistent relational datastore.
-
-The development Compose configuration creates PostgreSQL with
-environment variables:
-
-``` text
-POSTGRES_DB
-POSTGRES_USER
-POSTGRES_PASSWORD
-POSTGRES_PORT
-```
-
-The backend uses:
-
-``` text
-postgresql+asyncpg://...
-```
-
-through SQLAlchemy’s async engine.
-
-The primary async PostgreSQL driver required by the backend is:
-
-``` text
-asyncpg
-```
-
-Database migrations are managed with Alembic.
+Database migrations are managed using Alembic.
 
 The repository includes:
 
-``` text
+```text
 Backend/alembic.ini
 ```
 
 and the Alembic migration environment.
 
-------------------------------------------------------------------------
+---
 
-# Redis
+## Redis
 
-Redis is used for fast, low-latency data such as:
+Redis provides low-latency infrastructure used by TraceForge for:
 
-- usage counters
-- quota enforcement
-- analytics metrics
-- other ephemeral/fast-access state
+* usage counters
+* quota enforcement
+* analytics metrics
+* other fast-access application state
 
-The local Compose configuration uses:
+The Redis container uses:
 
-``` text
-redis:7-alpine
+```yaml
+image: redis:7-alpine
 ```
 
-on:
+Inside the Docker network, Redis is available at:
 
-``` text
-localhost:6379
+```text
+redis:6379
 ```
 
-and enables append-only persistence.
+Redis data is persisted using:
 
-The project separates Redis responsibilities into services such as:
+```text
+redis_data
+```
 
-``` text
+TraceForge separates Redis responsibilities through services such as:
+
+```text
 RedisMetricsService
 RedisUsageService
 ```
 
-so usage enforcement and analytics do not become the same subsystem.
+This keeps analytics processing separate from usage and quota enforcement.
 
-------------------------------------------------------------------------
+---
 
-# Kafka / Redpanda
+## Kafka / Redpanda
 
-Redpanda provides the Kafka-compatible broker for local development.
+Redpanda provides the Kafka-compatible event streaming layer used by
+TraceForge.
 
-The current Compose configuration uses:
+The Docker deployment uses:
 
-``` text
-redpandadata/redpanda:latest
+```yaml
+image: redpandadata/redpanda:latest
 ```
 
-and exposes Kafka on:
+Application services connect to Redpanda through:
 
-``` text
-9092
+```text
+redpanda:9092
 ```
 
-The backend’s event-processing code uses `aiokafka`.
+Redpanda data is persisted using:
 
-The Kafka-compatible infrastructure is used for asynchronous processing
-rather than forcing all event work through the main HTTP request
-process.
+```text
+redpanda_data
+```
 
-When application services are later containerized, Kafka connection
-strings should use the Compose service name from inside Docker rather
-than `localhost`.
+The backend event-processing layer uses `aiokafka` to communicate with the
+Kafka-compatible broker.
 
-For the current host-based development workflow, the broker is exposed
-on the host as configured by Compose.
+Kafka/Redpanda is used for asynchronous processing so event workloads can be
+handled independently from the main HTTP request process.
 
-------------------------------------------------------------------------
+---
 
-# Requirements
+## Backend
 
-The backend uses a project-specific `requirements.txt`.
+The FastAPI backend is built using the root `Dockerfile`.
 
-The SDK is maintained separately as a Python package and has its own
-`pyproject.toml`.
+The container runs the application through Uvicorn:
 
-The frontend uses npm rather than `requirements.txt`.
+```text
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 6
+```
 
-In short:
+The backend is published to the host at:
 
-``` text
+```text
+http://localhost:8000
+```
+
+The backend supports multiple Uvicorn workers.
+
+Worker count should be selected according to available CPU resources and the
+application workload.
+
+More workers do not automatically mean higher performance. Throughput and
+latency should be validated using load testing.
+
+---
+
+## Kafka Consumer
+
+The Kafka consumer uses the same Python image as the backend but runs as a
+separate container.
+
+It starts with:
+
+```text
+python -m app.kafka.consumer
+```
+
+The consumer processes asynchronous events from Redpanda independently of the
+main FastAPI process.
+
+---
+
+## Alert Handler
+
+The alert handler also uses the shared Python application image.
+
+It starts with:
+
+```text
+python -m app.handlers.alert_handler
+```
+
+The alert handler processes alert-related events independently from the main
+API process.
+
+Running the backend, Kafka consumer, and alert handler as separate containers
+keeps their workloads isolated while allowing them to share the same
+application image and dependencies.
+
+---
+
+## Frontend
+
+The frontend is built separately using:
+
+```text
+Frontend/Dockerfile
+```
+
+It runs the Vite development server inside a Node.js container:
+
+```text
+npm run dev -- --host 0.0.0.0
+```
+
+The frontend is published to:
+
+```text
+http://localhost:5173
+```
+
+The browser accesses the frontend through the published host port.
+
+---
+
+# Docker Networking
+
+Docker Compose creates an internal network for the application services.
+
+Inside this network, services communicate using their Compose service names.
+
+```text
 Backend
-    -> requirements.txt
-
-Frontend
-    -> package.json / package-lock.json
-
-SDK
-    -> pyproject.toml
+   │
+   ├── PostgreSQL → postgres:5432
+   ├── Redis      → redis:6379
+   └── Redpanda   → redpanda:9092
 ```
+
+The host machine accesses published services through `localhost`.
+
+```text
+Browser
+   │
+   ├── Frontend → localhost:5173
+   └── Backend  → localhost:8000
+```
+
+This allows the application services to communicate internally without
+changing application code between containers.
+
+---
+
+# Docker Logs
+
+View logs for the complete stack:
+
+```bash
+docker compose logs -f
+```
+
+View logs for the backend:
+
+```bash
+docker compose logs -f backend
+```
+
+View logs for the Kafka consumer:
+
+```bash
+docker compose logs -f kafka-consumer
+```
+
+View logs for the alert handler:
+
+```bash
+docker compose logs -f alert-handler
+```
+
+View logs for the frontend:
+
+```bash
+docker compose logs -f frontend
+```
+
+---
+
+# Stopping TraceForge
+
+Stop the running containers:
+
+```bash
+docker compose down
+```
+
+This stops and removes the containers while keeping the named Docker volumes.
+
+To remove the containers and persistent volumes:
+
+```bash
+docker compose down -v
+```
+
+The `-v` option removes the PostgreSQL, Redis, and Redpanda volumes and
+therefore deletes their persisted local data.
+
+Use this only when you intentionally want to reset the local environment.
+
+---
+
+# Development
+
+Docker Compose is the recommended way to run the complete TraceForge stack
+from a fresh clone.
+
+The repository also contains:
+
+```text
+.vscode/tasks.json
+```
+
+with a `Start Everything` development task.
+
+This workflow is intended for contributors who want to run individual
+application components directly from VS Code for development and debugging.
+
+The Docker Compose setup remains the primary reproducible environment for
+running the complete platform.
 
 ------------------------------------------------------------------------
 ## Performance
@@ -1942,7 +1558,7 @@ SDK/README.md
 ----------------------------------------------
 # Development Entry Points
 
-For quick reference:
+Local Development Reference
 
 | Component      | Local command                                                   | Working directory |
 |----------------|-----------------------------------------------------------------|-------------------|
@@ -1952,6 +1568,9 @@ For quick reference:
 | Alert Handler  | `venv\Scripts\activate && python -m app.handlers.alert_handler` | `Backend/`        |
 | Frontend       | `npm run dev`                                                   | `Frontend/`       |
 | SDK test       | `python tests/test_<provider>_<mode>.py`                        | `SDK/`            |
+
+These commands are intended for contributors working on individual
+components. For running the complete platform, use Docker Compose.
 
 ------------------------------------------------------------------------
 

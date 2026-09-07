@@ -38,3 +38,5 @@ alembic/__pycache__/
 *.egg-info/
 build/
 dist/
+
+.vscode/settings.json
